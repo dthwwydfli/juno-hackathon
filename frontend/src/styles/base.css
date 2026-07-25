@@ -1,0 +1,88 @@
+/* Reset + typography + responsive phone frame.
+   On desktop the app renders inside a 390×844 phone frame (like the mockups).
+   On mobile (<=430px) it goes full-bleed to fill the device. */
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body, #root { height: 100%; }
+
+body {
+  background: var(--page-bg);
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  font-variant-numeric: tabular-nums;
+}
+
+button { font: inherit; color: inherit; cursor: pointer; }
+a { color: inherit; text-decoration: none; }
+input, textarea, select { font: inherit; color: inherit; }
+
+/* Stage centers the phone on desktop */
+.stage {
+  min-height: 100%;
+  background: var(--page-bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 16px;
+}
+
+/* Phone frame */
+.phone {
+  width: 390px;
+  max-width: 100%;
+  height: 844px;
+  max-height: 100dvh;
+  background: var(--app-bg);
+  border-radius: 46px;
+  box-shadow: var(--frame-shadow);
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  color: var(--text);
+  border: 1px solid var(--hairline);
+}
+
+/* The scrollable screen body inside the frame */
+.screen-body {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+/* iOS home indicator */
+.home-ind {
+  position: absolute;
+  bottom: 9px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 134px; height: 5px;
+  border-radius: 3px;
+  background: var(--text);
+  opacity: .25;
+  pointer-events: none;
+  z-index: 5;
+}
+
+/* Full-bleed on real phones */
+@media (max-width: 480px) {
+  .stage { padding: 0; }
+  .phone {
+    width: 100%;
+    height: 100dvh;
+    max-height: none;
+    border-radius: 0;
+    border: 0;
+    box-shadow: none;
+  }
+  .phone .home-ind { display: none; }
+}
+
+/* Respect users who reduce motion */
+@media (prefers-reduced-motion: reduce) {
+  * { animation-duration: .001ms !important; transition-duration: .001ms !important; }
+}

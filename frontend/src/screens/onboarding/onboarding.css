@@ -1,0 +1,309 @@
+/* Onboarding — profile / disclosure, inside the phone frame. */
+.ob-topbar {
+  flex: 0 0 auto;
+  padding: 6px 18px 6px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.ob-rbtn {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text);
+  flex: 0 0 auto;
+}
+.ob-step {
+  margin-left: auto;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--faint);
+}
+.ob-progress {
+  flex: 0 0 auto;
+  height: 4px;
+  margin: 6px 20px 0;
+  background: var(--surface-sunk);
+  border-radius: 3px;
+  overflow: hidden;
+}
+.ob-progress i {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+  border-radius: 3px;
+  transition: width 0.25s ease;
+}
+
+.ob-screen {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+.ob-head {
+  flex: 0 0 auto;
+  padding: 14px 22px 4px;
+}
+.ob-head h1 {
+  font-size: 26px;
+  font-weight: 750;
+  letter-spacing: -0.02em;
+  text-wrap: balance;
+}
+.ob-head p {
+  font-size: 14.5px;
+  line-height: 1.5;
+  color: var(--muted);
+  margin-top: 8px;
+}
+
+.ob-body {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  padding: 16px 22px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.ob-field {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+.ob-flabel {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--faint);
+}
+.ob-input {
+  background: var(--field-bg);
+  border: 1px solid var(--hairline);
+  border-radius: 12px;
+  padding: 14px 15px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.ob-input input {
+  flex: 1 1 auto;
+  border: 0;
+  background: transparent;
+  font-size: 16px;
+  outline: none;
+  min-width: 0;
+}
+.ob-input .u {
+  font-size: 13px;
+  color: var(--faint);
+  flex: 0 0 auto;
+}
+
+.ob-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 9px;
+}
+.ob-chip {
+  border: 1px solid var(--hairline);
+  background: var(--field-bg);
+  border-radius: 20px;
+  padding: 10px 16px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--muted);
+}
+.ob-chip.on {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+  box-shadow: 0 6px 14px -4px color-mix(in srgb, var(--accent) 50%, transparent);
+}
+
+.ob-medchips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 9px;
+}
+.ob-medchip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--accent-tint);
+  color: var(--accent-ink);
+  border-radius: 20px;
+  padding: 8px 10px 8px 13px;
+  font-size: 13.5px;
+  font-weight: 600;
+}
+.ob-medchip .x {
+  width: 18px;
+  height: 18px;
+  border: 0;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--accent) 22%, transparent);
+  color: var(--accent-ink);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ob-addrow {
+  display: flex;
+  gap: 9px;
+}
+.ob-addrow input {
+  flex: 1 1 auto;
+  background: var(--field-bg);
+  border: 1px solid var(--hairline);
+  border-radius: 12px;
+  padding: 13px 15px;
+  font-size: 15px;
+  outline: none;
+  min-width: 0;
+}
+.ob-addrow input::placeholder { color: var(--faint); }
+.ob-addmed {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: var(--accent-tint);
+  border: 1px dashed color-mix(in srgb, var(--accent) 45%, var(--hairline));
+  border-radius: 12px;
+  padding: 14px;
+  font-size: 15px;
+  font-weight: 650;
+  color: var(--accent-ink);
+}
+.ob-hint {
+  font-size: 12.5px;
+  color: var(--faint);
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+  line-height: 1.4;
+}
+.ob-hint svg { flex: 0 0 auto; margin-top: 1px; }
+.ob-skiplink {
+  display: block;
+  margin: 12px auto 0;
+  background: none;
+  border: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+/* disclosure */
+.ob-srccard {
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: var(--shadow);
+}
+.ob-srcrow {
+  display: flex;
+  align-items: flex-start;
+  gap: 13px;
+  padding: 14px 15px;
+}
+.ob-srcrow .si {
+  width: 38px;
+  height: 38px;
+  border-radius: 11px;
+  background: var(--accent-tint);
+  color: var(--accent-ink);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+}
+.ob-srcrow .s1 { font-size: 15px; font-weight: 650; }
+.ob-srcrow .s2 {
+  font-size: 13px;
+  color: var(--muted);
+  margin-top: 2px;
+  line-height: 1.4;
+}
+.ob-note {
+  background: var(--surface-sunk);
+  border-radius: 12px;
+  padding: 13px 14px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--muted);
+  display: flex;
+  gap: 9px;
+}
+.ob-note svg { flex: 0 0 auto; margin-top: 1px; color: var(--faint); }
+
+.ob-consent {
+  display: flex;
+  align-items: flex-start;
+  gap: 11px;
+  padding: 2px;
+  cursor: pointer;
+}
+.ob-consent input { position: absolute; opacity: 0; pointer-events: none; }
+.ob-box {
+  width: 24px;
+  height: 24px;
+  border-radius: 7px;
+  background: var(--field-bg);
+  border: 1.5px solid var(--hairline);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  flex: 0 0 auto;
+  margin-top: 1px;
+}
+.ob-consent input:checked + .ob-box {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+.ob-box svg { opacity: 0; }
+.ob-consent input:checked + .ob-box svg { opacity: 1; }
+.ob-ct {
+  font-size: 14px;
+  line-height: 1.45;
+  font-weight: 500;
+}
+
+.ob-footer {
+  flex: 0 0 auto;
+  padding: 12px 22px 30px;
+  background: linear-gradient(to top, var(--app-bg) 72%, transparent);
+}
+.ob-cta {
+  width: 100%;
+  border: 0;
+  border-radius: 15px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 16px;
+  font-weight: 700;
+  padding: 16px 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  box-shadow: 0 10px 22px -6px color-mix(in srgb, var(--accent) 55%, transparent);
+}
+.ob-cta:disabled {
+  opacity: 0.45;
+  box-shadow: none;
+  cursor: not-allowed;
+}

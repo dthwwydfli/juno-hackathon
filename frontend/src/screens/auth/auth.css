@@ -1,0 +1,195 @@
+/* Auth — sign in / face id, inside the phone frame. */
+.auth-screen {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.auth-brand {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 34px 0 8px;
+}
+.auth-mark {
+  width: 64px;
+  height: 64px;
+  border-radius: 19px;
+  background: var(--accent);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 12px 26px -8px color-mix(in srgb, var(--accent) 55%, transparent);
+}
+.auth-brandname {
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+/* sign in */
+.si-body {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 0 26px;
+}
+.si-body h1 {
+  font-size: 27px;
+  font-weight: 750;
+  letter-spacing: -0.02em;
+  text-align: center;
+}
+.si-body .si-sub {
+  font-size: 14.5px;
+  color: var(--muted);
+  text-align: center;
+  margin-top: 8px;
+  line-height: 1.5;
+}
+.authbtns {
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
+  margin-top: 28px;
+}
+.authbtn {
+  width: 100%;
+  height: 52px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  font-size: 16px;
+  font-weight: 650;
+  border: 1px solid transparent;
+  background: var(--surface);
+  color: var(--text);
+}
+.authbtn.apple {
+  background: var(--text);
+  color: var(--app-bg);
+}
+.authbtn.google {
+  background: var(--surface);
+  color: var(--text);
+  border-color: var(--hairline);
+}
+.auth-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 20px 0 4px;
+  color: var(--faint);
+  font-size: 12.5px;
+}
+.auth-divider::before,
+.auth-divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--hairline);
+}
+.emailrow {
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
+  margin-top: 14px;
+}
+.emailfield {
+  background: var(--field-bg);
+  border: 1px solid var(--hairline);
+  border-radius: 14px;
+  height: 52px;
+  padding: 0 16px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--muted);
+}
+.emailfield svg { color: var(--faint); flex: 0 0 auto; }
+.emailfield input {
+  flex: 1 1 auto;
+  border: 0;
+  background: transparent;
+  font-size: 15.5px;
+  outline: none;
+}
+.emailfield input::placeholder { color: var(--faint); }
+.authbtn.email {
+  background: var(--accent);
+  color: #fff;
+  box-shadow: 0 10px 22px -6px color-mix(in srgb, var(--accent) 55%, transparent);
+}
+.auth-terms {
+  flex: 0 0 auto;
+  text-align: center;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--faint);
+  padding: 16px 34px 30px;
+}
+.auth-terms b { color: var(--muted); font-weight: 600; }
+
+/* face id */
+.fid {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 0 34px;
+}
+.fid .greeting {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--accent-ink);
+  margin-bottom: 18px;
+}
+.fid .halo {
+  width: 132px;
+  height: 132px;
+  border-radius: 36px;
+  background: var(--accent-tint);
+  color: var(--accent-ink);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 26px;
+  border: 0;
+}
+.fid .halo svg { width: 74px; height: 74px; }
+.fid h1 {
+  font-size: 24px;
+  font-weight: 750;
+  letter-spacing: -0.02em;
+}
+.fid p {
+  font-size: 15px;
+  color: var(--muted);
+  margin-top: 10px;
+  line-height: 1.5;
+  max-width: 260px;
+}
+.fid-foot {
+  flex: 0 0 auto;
+  padding: 0 34px 40px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+.passcode {
+  border: 0;
+  background: none;
+  font-size: 15px;
+  font-weight: 650;
+  color: var(--accent-ink);
+}

@@ -1,0 +1,100 @@
+/* NHS connection screen — ported from designs/nhs-connection.html */
+.nhs-screen {
+  padding: 8px 18px 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+/* status hero */
+.nhs-screen .hero {
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+  border-radius: 20px;
+  padding: 18px;
+  display: flex; align-items: center; gap: 14px;
+  box-shadow: var(--shadow);
+}
+.nhs-screen .hero .badge {
+  width: 56px; height: 56px; border-radius: 15px;
+  background: var(--nhs); color: #fff;
+  display: flex; align-items: center; justify-content: center; flex: 0 0 auto;
+  font-weight: 800; font-size: 15px; letter-spacing: .02em;
+}
+.nhs-screen .hero .h1 { font-size: 17px; font-weight: 700; }
+.nhs-screen .hero .h2 { font-size: 13px; color: var(--muted); margin-top: 2px; }
+.nhs-screen .conn {
+  margin-left: auto; flex: 0 0 auto;
+  font-size: 12px; font-weight: 700; color: var(--accent-ink);
+  background: var(--accent-tint); border-radius: 20px; padding: 4px 11px;
+  display: flex; align-items: center; gap: 6px;
+}
+.nhs-screen .conn .d { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); }
+
+/* sync card */
+.nhs-screen .sync {
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+  border-radius: 18px;
+  padding: 16px;
+  box-shadow: var(--shadow);
+}
+.nhs-screen .sync .top { display: flex; align-items: center; gap: 12px; }
+.nhs-screen .sync .si {
+  width: 42px; height: 42px; border-radius: 12px;
+  background: var(--accent-tint); color: var(--accent-ink);
+  display: flex; align-items: center; justify-content: center; flex: 0 0 auto;
+}
+.nhs-screen .sync .s1 {
+  font-size: 12px; font-weight: 700; letter-spacing: .04em;
+  text-transform: uppercase; color: var(--faint);
+}
+.nhs-screen .sync .s2 { font-size: 16px; font-weight: 650; margin-top: 2px; font-variant-numeric: tabular-nums; }
+.nhs-screen .sync .uptodate {
+  margin-left: auto; font-size: 12px; font-weight: 600;
+  color: var(--accent-ink); display: flex; align-items: center; gap: 5px;
+}
+.nhs-screen .syncbtn {
+  width: 100%; margin-top: 14px; border: 0; border-radius: 13px;
+  background: var(--accent); color: #fff; font: inherit; font-size: 15px; font-weight: 700;
+  padding: 13px 0; display: flex; align-items: center; justify-content: center; gap: 9px;
+  box-shadow: 0 8px 18px -6px color-mix(in srgb, var(--accent) 55%, transparent);
+}
+.nhs-screen .syncbtn:active { transform: scale(.985); }
+.nhs-screen .syncbtn:disabled { opacity: .7; }
+.nhs-screen .syncbtn .spin { display: inline-flex; animation: nhs-spin 0.8s linear infinite; }
+@keyframes nhs-spin { to { transform: rotate(360deg); } }
+.nhs-screen .synchint {
+  font-size: 12.5px; color: var(--faint); margin-top: 11px;
+  display: flex; gap: 8px; line-height: 1.4;
+}
+.nhs-screen .synchint svg { flex: 0 0 auto; margin-top: 1px; }
+
+/* sync history */
+.nhs-screen .glabel {
+  font-size: 12px; font-weight: 700; letter-spacing: .06em;
+  text-transform: uppercase; color: var(--faint); padding: 0 4px;
+}
+.nhs-screen .log {
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+  border-radius: 16px; overflow: hidden; box-shadow: var(--shadow);
+}
+.nhs-screen .lrow { display: flex; align-items: flex-start; gap: 12px; padding: 13px 15px; }
+.nhs-screen .lrow + .lrow { border-top: 1px solid var(--hairline); }
+.nhs-screen .ldot { width: 30px; display: flex; flex-direction: column; align-items: center; flex: 0 0 auto; padding-top: 2px; }
+.nhs-screen .ldot .c { width: 10px; height: 10px; border-radius: 50%; background: var(--surface-sunk); border: 2px solid var(--faint); }
+.nhs-screen .lrow.now .ldot .c { background: var(--accent); border-color: var(--accent); }
+.nhs-screen .lmain { flex: 1 1 auto; min-width: 0; }
+.nhs-screen .l1 { font-size: 14.5px; font-weight: 600; }
+.nhs-screen .l2 { font-size: 12.5px; color: var(--muted); margin-top: 2px; }
+.nhs-screen .lv {
+  flex: 0 0 auto; font-size: 11px; font-weight: 700; color: var(--muted);
+  background: var(--surface-sunk); border-radius: 20px; padding: 2px 9px; font-variant-numeric: tabular-nums;
+}
+.nhs-screen .lrow.now .lv { background: var(--accent-tint); color: var(--accent-ink); }
+
+.nhs-screen .disconnect {
+  text-align: center; font-size: 14px; font-weight: 600; color: var(--warn);
+  padding: 4px 0 2px; background: none; border: 0; font-family: inherit; width: 100%;
+}

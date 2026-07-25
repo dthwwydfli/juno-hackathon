@@ -1,0 +1,82 @@
+/* Design tokens — extracted verbatim from designs/home.html (the source of truth).
+   Three-layer theming: base :root (light) + prefers-color-scheme:dark + explicit
+   [data-theme] overrides so an in-app toggle can force a theme. */
+:root {
+  --page-bg: #E8E7E2;
+  --app-bg: #F7F7F4;
+  --surface: #FFFFFF;
+  --surface-sunk: #F1F0EB;
+  --text: #1A1A17;
+  --muted: #6B6B63;
+  --faint: #9A998F;
+  --hairline: #ECEBE6;
+  --accent: #12A594;
+  --accent-ink: #0B6E62;
+  --accent-tint: #E7F5F2;
+  --warn: #E5544B;
+  --warn-tint: #FDECEA;
+  /* Interaction amber — legal rule: single amber, never graded/red on interaction surfaces */
+  --amber: #C7791F;
+  --amber-ink: #9A5B12;
+  --amber-tint: #FBEEDD;
+  --nhs: #005EB8;
+  --shadow: 0 1px 2px rgba(26,26,23,.04), 0 8px 24px rgba(26,26,23,.06);
+  --frame-shadow: 0 40px 80px -20px rgba(26,26,23,.35), 0 12px 28px -8px rgba(26,26,23,.22);
+  --tile-a: #E7F5F2; --tile-a-ink: #12A594;
+  --tile-b: #EDEBFB; --tile-b-ink: #6E62D6;
+  --tile-c: #FBEFE4; --tile-c-ink: #C97A2C;
+  --tile-d: #E9F1FA; --tile-d-ink: #3B7BC4;
+  --tile-e: #FBE9EF; --tile-e-ink: #C4487A;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --page-bg: #111110;
+    --app-bg: #17170F;
+    --surface: #201F1A;
+    --surface-sunk: #191813;
+    --text: #F4F3EC;
+    --muted: #A6A599;
+    --faint: #75746A;
+    --hairline: #2C2B24;
+    --accent: #2BC4B0;
+    --accent-ink: #7FE0D3;
+    --accent-tint: #10312D;
+    --warn: #F0736A;
+    --warn-tint: #3A1D1B;
+    --amber: #E0A05C;
+    --amber-ink: #F0C38A;
+    --amber-tint: #33251A;
+    --nhs: #4C93D6;
+    --shadow: 0 1px 2px rgba(0,0,0,.3), 0 8px 24px rgba(0,0,0,.4);
+    --frame-shadow: 0 40px 90px -20px rgba(0,0,0,.7), 0 12px 28px -8px rgba(0,0,0,.5);
+    --tile-a: #10312D; --tile-a-ink: #4FD6C4;
+    --tile-b: #211E3A; --tile-b-ink: #9B90F0;
+    --tile-c: #33251A; --tile-c-ink: #E0A05C;
+    --tile-d: #172735; --tile-d-ink: #6FA9DE;
+    --tile-e: #331A26; --tile-e-ink: #E17FA6;
+  }
+}
+:root[data-theme="light"] {
+  --page-bg: #E8E7E2; --app-bg: #F7F7F4; --surface: #FFFFFF; --surface-sunk: #F1F0EB;
+  --text: #1A1A17; --muted: #6B6B63; --faint: #9A998F; --hairline: #ECEBE6;
+  --accent: #12A594; --accent-ink: #0B6E62; --accent-tint: #E7F5F2;
+  --warn: #E5544B; --warn-tint: #FDECEA;
+  --amber: #C7791F; --amber-ink: #9A5B12; --amber-tint: #FBEEDD; --nhs: #005EB8;
+  --shadow: 0 1px 2px rgba(26,26,23,.04), 0 8px 24px rgba(26,26,23,.06);
+  --frame-shadow: 0 40px 80px -20px rgba(26,26,23,.35), 0 12px 28px -8px rgba(26,26,23,.22);
+  --tile-a: #E7F5F2; --tile-a-ink: #12A594; --tile-b: #EDEBFB; --tile-b-ink: #6E62D6;
+  --tile-c: #FBEFE4; --tile-c-ink: #C97A2C; --tile-d: #E9F1FA; --tile-d-ink: #3B7BC4;
+  --tile-e: #FBE9EF; --tile-e-ink: #C4487A;
+}
+:root[data-theme="dark"] {
+  --page-bg: #111110; --app-bg: #17170F; --surface: #201F1A; --surface-sunk: #191813;
+  --text: #F4F3EC; --muted: #A6A599; --faint: #75746A; --hairline: #2C2B24;
+  --accent: #2BC4B0; --accent-ink: #7FE0D3; --accent-tint: #10312D;
+  --warn: #F0736A; --warn-tint: #3A1D1B;
+  --amber: #E0A05C; --amber-ink: #F0C38A; --amber-tint: #33251A; --nhs: #4C93D6;
+  --shadow: 0 1px 2px rgba(0,0,0,.3), 0 8px 24px rgba(0,0,0,.4);
+  --frame-shadow: 0 40px 90px -20px rgba(0,0,0,.7), 0 12px 28px -8px rgba(0,0,0,.5);
+  --tile-a: #10312D; --tile-a-ink: #4FD6C4; --tile-b: #211E3A; --tile-b-ink: #9B90F0;
+  --tile-c: #33251A; --tile-c-ink: #E0A05C; --tile-d: #172735; --tile-d-ink: #6FA9DE;
+  --tile-e: #331A26; --tile-e-ink: #E17FA6;
+}

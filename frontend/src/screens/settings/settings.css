@@ -1,0 +1,92 @@
+/* Settings screen — ported from designs/settings.html */
+.settings-screen {
+  padding: 6px 18px 30px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* profile card */
+.settings-screen .profile {
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+  border-radius: 20px;
+  padding: 18px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  box-shadow: var(--shadow);
+  width: 100%;
+  text-align: left;
+}
+.settings-screen .pavatar {
+  width: 60px; height: 60px;
+  border-radius: 50%;
+  background: var(--accent-tint);
+  color: var(--accent-ink);
+  display: flex; align-items: center; justify-content: center;
+  flex: 0 0 auto;
+}
+.settings-screen .pinfo { flex: 1 1 auto; min-width: 0; }
+.settings-screen .pname { font-size: 18px; font-weight: 700; letter-spacing: -.01em; }
+.settings-screen .pmeta { font-size: 13px; color: var(--muted); margin-top: 3px; }
+.settings-screen .editbtn {
+  flex: 0 0 auto;
+  font: inherit; font-size: 13px; font-weight: 600;
+  color: var(--accent-ink); background: var(--accent-tint);
+  border: 0; border-radius: 20px; padding: 8px 14px;
+}
+.settings-screen .editbtn:active { transform: scale(.96); }
+
+/* groups + rows */
+.settings-screen .group { display: flex; flex-direction: column; gap: 8px; }
+.settings-screen .glabel {
+  font-size: 12px; font-weight: 700; letter-spacing: .06em;
+  text-transform: uppercase; color: var(--faint); padding: 0 6px;
+}
+.settings-screen .list {
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: var(--shadow);
+}
+.settings-screen .row {
+  display: flex; align-items: center; gap: 13px;
+  padding: 14px 15px;
+  width: 100%; text-align: left;
+  background: none; border: 0; font: inherit; color: inherit;
+}
+.settings-screen .row + .row,
+.settings-screen .row + .theme-row,
+.settings-screen .theme-row + .row { border-top: 1px solid var(--hairline); }
+.settings-screen button.row:active { background: var(--surface-sunk); }
+.settings-screen .ricon {
+  width: 34px; height: 34px; border-radius: 10px;
+  background: var(--surface-sunk); color: var(--muted);
+  display: flex; align-items: center; justify-content: center; flex: 0 0 auto;
+}
+.settings-screen .rlabel { flex: 1 1 auto; font-size: 15px; font-weight: 550; }
+.settings-screen .rlabel small { display: block; font-size: 12px; font-weight: 400; color: var(--faint); margin-top: 1px; }
+.settings-screen .rval { font-size: 14.5px; color: var(--muted); font-weight: 500; }
+.settings-screen .rcount {
+  font-size: 12px; font-weight: 700;
+  background: var(--surface-sunk); color: var(--muted);
+  border-radius: 20px; padding: 2px 9px; font-variant-numeric: tabular-nums;
+}
+.settings-screen .row .chev { color: var(--faint); flex: 0 0 auto; }
+.settings-screen .conn {
+  font-size: 12px; font-weight: 700; color: var(--accent-ink);
+  background: var(--accent-tint); border-radius: 20px; padding: 3px 10px;
+  display: flex; align-items: center; gap: 5px;
+}
+.settings-screen .conn .d { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); }
+
+/* theme row (segmented control) */
+.settings-screen .theme-row {
+  display: flex; flex-direction: column; gap: 12px;
+  padding: 14px 15px;
+}
+.settings-screen .theme-row .theme-head { display: flex; align-items: center; gap: 13px; }
+.settings-screen .theme-chips .chip-group { flex-wrap: nowrap; gap: 8px; }
+.settings-screen .theme-chips .chip { flex: 1 1 0; text-align: center; padding: 9px 0; }

@@ -1,0 +1,221 @@
+/* Add medication flow — manual | camera | scan | filled + time picker. */
+
+.add-body { padding: 8px 18px 24px; gap: 16px; }
+
+/* ---- auto-fill banner (filled state) ---- */
+.add-filled-banner {
+  display: flex; align-items: center; gap: 10px;
+  background: var(--accent-tint); color: var(--accent-ink);
+  border: 1px solid color-mix(in srgb, var(--accent) 35%, var(--hairline));
+  border-radius: 14px; padding: 12px 14px;
+  font-size: 13.5px; font-weight: 600;
+}
+.add-filled-banner svg { flex: 0 0 auto; }
+
+/* ---- name row (photo + medication name) ---- */
+.add-name-row { display: flex; gap: 13px; align-items: stretch; }
+.add-name-row .field { flex: 1 1 auto; justify-content: center; }
+.add-photo {
+  width: 74px; height: 74px; flex: 0 0 auto;
+  border-radius: 16px;
+  border: 1.5px dashed color-mix(in srgb, var(--accent) 45%, var(--hairline));
+  background: var(--accent-tint); color: var(--accent-ink);
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
+}
+.add-photo span { font-size: 10px; font-weight: 600; }
+.add-photo.filled {
+  border: 1px solid var(--hairline);
+  background: var(--tile-a); color: var(--tile-a-ink);
+}
+
+.add-gtin-row {
+  display: flex; gap: 10px; align-items: flex-end;
+}
+.add-gtin-row .field { flex: 1 1 auto; }
+.add-gtin-btn {
+  flex: 0 0 auto; height: 44px; padding: 0 16px;
+  border-radius: 12px; border: 1px solid var(--hairline);
+  background: var(--surface); font-weight: 600; font-size: 14px;
+}
+.add-lookup-err { font-size: 13px; color: var(--amber-ink); margin: -8px 0 0; }
+
+/* ---- dose · route · time card ---- */
+.add-dosecard {
+  display: flex; flex-direction: column; gap: 11px;
+  background: var(--surface); border: 1px solid var(--hairline);
+  border-radius: 16px; padding: 15px 15px 16px;
+  box-shadow: 0 1px 2px rgba(26,26,23,.04), 0 10px 26px -10px rgba(26,26,23,.14);
+}
+.add-dgrid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 9px; align-items: start; }
+.add-ch { font-size: 11px; font-weight: 700; letter-spacing: .04em; color: var(--faint); padding-left: 3px; }
+
+/* shared "cell" look for dose input / route select / time button */
+.add-cell {
+  background: var(--surface); border: 1px solid var(--hairline);
+  border-radius: 12px; padding: 12px 11px;
+  font-size: 14.5px; color: var(--text);
+  min-height: 48px; width: 100%;
+  display: flex; align-items: center; justify-content: space-between; gap: 4px;
+}
+.add-input { font: inherit; font-size: 14.5px; outline: none; -webkit-appearance: none; appearance: none; }
+.add-input::placeholder { color: var(--faint); }
+.add-input:focus { border-color: var(--accent); }
+
+.add-time { font: inherit; text-align: left; cursor: pointer; }
+.add-time span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.add-time.placeholder { color: var(--faint); }
+.add-time .chev, .add-cell .chev { color: var(--faint); flex: 0 0 auto; }
+.add-time-extra { margin-top: -2px; }
+
+/* route select tuned to match the cells */
+.add-dgrid .select-box select {
+  border-radius: 12px; box-shadow: none;
+  padding: 12px 30px 12px 11px; min-height: 48px;
+  font-size: 14.5px; font-weight: 500;
+}
+.add-dgrid .select-box::after { right: 12px; }
+
+.add-addrow {
+  width: 100%; margin-top: 2px;
+  display: flex; align-items: center; justify-content: center; gap: 7px;
+  background: var(--surface-sunk);
+  border: 1px dashed color-mix(in srgb, var(--accent) 40%, var(--hairline));
+  border-radius: 12px; padding: 12px;
+  font: inherit; font-size: 13.5px; font-weight: 650; color: var(--accent-ink);
+}
+
+/* ---- category chips (full-width, solid when on) ---- */
+.add-cat .chip-group { gap: 9px; flex-wrap: nowrap; }
+.add-cat .chip { flex: 1; text-align: center; padding: 11px 0; }
+.add-cat .chip.on {
+  background: var(--accent); border-color: var(--accent); color: #fff;
+  box-shadow: 0 6px 14px -4px color-mix(in srgb, var(--accent) 50%, transparent);
+}
+
+/* ---- date fields ---- */
+.add-two { display: flex; gap: 12px; }
+.add-two .field { flex: 1; min-width: 0; }
+.add-date { color: var(--text); }
+
+/* ---- sticky footer + CTA ---- */
+.add-footer {
+  flex: 0 0 auto; padding: 12px 18px 26px;
+  padding-bottom: max(26px, env(safe-area-inset-bottom));
+  background: linear-gradient(to top, var(--app-bg) 70%, transparent);
+  border-radius: 0 0 46px 46px;
+}
+.add-cta {
+  width: 100%; border: 0; border-radius: 15px;
+  background: var(--accent); color: #fff;
+  font: inherit; font-size: 16px; font-weight: 700; padding: 16px 0;
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 10px 22px -6px color-mix(in srgb, var(--accent) 55%, transparent);
+}
+.add-cta.disabled { background: var(--surface-sunk); color: var(--faint); box-shadow: none; pointer-events: none; }
+@media (max-width: 480px) { .add-footer { border-radius: 0; } }
+
+/* ---- camera request ---- */
+.add-camreq {
+  flex: 1 1 auto;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  text-align: center; padding: 0 34px; gap: 8px;
+}
+.add-halo {
+  width: 120px; height: 120px; border-radius: 50%;
+  background: var(--accent-tint); color: var(--accent-ink);
+  display: flex; align-items: center; justify-content: center; margin-bottom: 14px;
+}
+.add-camreq h2 { font-size: 23px; font-weight: 700; letter-spacing: -.02em; text-wrap: balance; }
+.add-camreq p { font-size: 15px; line-height: 1.5; color: var(--muted); max-width: 280px; }
+.add-privacy { display: flex; align-items: center; gap: 7px; font-size: 12.5px; color: var(--faint); margin-top: 6px; }
+
+/* ---- scan takeover (dark) ---- */
+.add-scan {
+  position: absolute; inset: 0; z-index: 6;
+  background: #0C0C0B; border-radius: 46px;
+  display: flex; flex-direction: column; color: #fff; overflow: hidden;
+}
+.add-vignette { position: absolute; inset: 0; background: radial-gradient(120% 80% at 50% 42%, rgba(255,255,255,.06), transparent 60%); }
+.add-scan-top {
+  position: relative; z-index: 2;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 8px 20px 0;
+}
+.add-scan-top .title { font-size: 16px; font-weight: 600; }
+.add-scan-btn {
+  width: 38px; height: 38px; border-radius: 50%;
+  background: rgba(255,255,255,.12); border: 0; color: #fff;
+  display: flex; align-items: center; justify-content: center;
+}
+.add-reticle-wrap {
+  position: relative; z-index: 2; flex: 1 1 auto;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 26px;
+}
+.add-reticle { width: 250px; height: 170px; position: relative; }
+.add-corner { position: absolute; width: 34px; height: 34px; border: 3px solid var(--accent); border-radius: 4px; }
+.add-corner.tl { top: 0; left: 0; border-right: 0; border-bottom: 0; border-top-left-radius: 14px; }
+.add-corner.tr { top: 0; right: 0; border-left: 0; border-bottom: 0; border-top-right-radius: 14px; }
+.add-corner.bl { bottom: 0; left: 0; border-right: 0; border-top: 0; border-bottom-left-radius: 14px; }
+.add-corner.br { bottom: 0; right: 0; border-left: 0; border-top: 0; border-bottom-right-radius: 14px; }
+.add-scan-hint { font-size: 14px; color: rgba(255,255,255,.7); font-weight: 500; }
+.add-match {
+  position: relative; z-index: 2; margin: 0 18px 30px;
+  background: rgba(28,28,26,.9); border: 1px solid rgba(255,255,255,.12);
+  backdrop-filter: blur(8px); border-radius: 18px; padding: 13px 14px;
+  display: flex; align-items: center; gap: 13px;
+}
+.add-match .dot {
+  width: 44px; height: 44px; border-radius: 12px;
+  background: var(--accent-tint); color: var(--accent-ink);
+  display: flex; align-items: center; justify-content: center; flex: 0 0 auto;
+}
+.add-match .mtext { flex: 1 1 auto; }
+.add-match .mt1 { font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--accent); }
+.add-match .mt2 { font-size: 16px; font-weight: 650; margin-top: 2px; }
+.add-match .mt3 { font-size: 12.5px; color: rgba(255,255,255,.6); margin-top: 1px; }
+.add-spin { width: 22px; height: 22px; flex: 0 0 auto; color: var(--accent); animation: add-spin 1s linear infinite; }
+@keyframes add-spin { to { transform: rotate(360deg); } }
+.add-scan-ind { position: absolute; bottom: 9px; left: 50%; transform: translateX(-50%); width: 134px; height: 5px; border-radius: 3px; background: #fff; opacity: .5; z-index: 7; }
+
+/* ---- time picker wheel ---- */
+.add-ts-head { display: flex; align-items: center; justify-content: space-between; padding: 2px 2px 8px; }
+.add-ts-title { font-size: 16px; font-weight: 700; }
+.add-ts-done { font: inherit; font-size: 15px; font-weight: 700; color: #fff; background: var(--accent); border: 0; border-radius: 11px; padding: 9px 18px; }
+.add-wheel { position: relative; height: 194px; display: flex; align-items: center; overflow: hidden; padding: 0 8px; }
+.add-band { position: absolute; left: 10px; right: 10px; top: 50%; transform: translateY(-50%); height: 42px; background: var(--surface-sunk); border-radius: 12px; z-index: 0; }
+.add-col { flex: 1; position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; }
+.add-col.colon { flex: 0 0 12px; }
+.add-val {
+  height: 34px; display: flex; align-items: center; justify-content: center;
+  font-variant-numeric: tabular-nums; font-weight: 650; color: var(--faint);
+  background: none; border: 0; font-family: inherit;
+}
+button.add-val { cursor: pointer; }
+.add-val.sel { font-size: 23px; color: var(--text); }
+.add-val.n1 { font-size: 20px; color: var(--muted); opacity: .72; }
+.add-val.n2 { font-size: 17px; color: var(--faint); opacity: .38; }
+.add-ts-hint { display: flex; align-items: center; justify-content: center; gap: 7px; font-size: 12.5px; color: var(--faint); margin-top: 10px; }
+
+/* ---- multi-row dose regimen (dose · route · time per row) ---- */
+.add-dosecard-head { display: flex; align-items: center; justify-content: space-between; }
+.add-dose-count {
+  font-size: 11px; font-weight: 700;
+  color: var(--accent-ink); background: var(--accent-tint);
+  padding: 2px 8px; border-radius: 20px; font-variant-numeric: tabular-nums;
+}
+.add-regrow.extra { border-top: 1px dashed var(--hairline); padding-top: 11px; }
+.add-regrow-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.add-regrow-head > span {
+  font-size: 11px; font-weight: 700; letter-spacing: .04em;
+  text-transform: uppercase; color: var(--faint);
+}
+.add-removerow {
+  display: flex; align-items: center; gap: 4px;
+  background: none; border: 0; cursor: pointer;
+  color: var(--amber-ink); font: inherit; font-size: 12px; font-weight: 650;
+}
+.add-removerow:active { opacity: .6; }
+
+/* ---- NHS course length ---- */
+.add-duration .field-hint { display: flex; align-items: flex-start; gap: 6px; line-height: 1.4; }
+.add-duration .field-hint svg { flex: 0 0 auto; margin-top: 1px; color: var(--accent-ink); }

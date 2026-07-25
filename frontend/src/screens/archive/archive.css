@@ -1,0 +1,38 @@
+/* Archive screen — reuses MedCard + the app list language */
+.archive-screen {
+  padding: 8px 18px 30px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.archive-screen .arch-head {
+  display: flex; align-items: center; gap: 10px;
+  padding: 2px 4px 0;
+}
+.archive-screen .arch-head .glabel {
+  font-size: 12px; font-weight: 700; letter-spacing: .06em;
+  text-transform: uppercase; color: var(--faint);
+}
+.archive-screen .arch-head .count {
+  font-size: 12px; font-weight: 700;
+  background: var(--surface-sunk); color: var(--muted);
+  border-radius: 20px; padding: 2px 9px; font-variant-numeric: tabular-nums;
+}
+.archive-screen .arch-note {
+  font-size: 12.5px; color: var(--faint); line-height: 1.4; padding: 0 4px 2px;
+}
+.archive-screen .arch-list { display: flex; flex-direction: column; gap: 10px; }
+
+/* empty state */
+.archive-screen .arch-empty {
+  margin-top: 40px;
+  display: flex; flex-direction: column; align-items: center; text-align: center; gap: 12px;
+  padding: 0 24px;
+}
+.archive-screen .arch-empty .eicon {
+  width: 64px; height: 64px; border-radius: 20px;
+  background: var(--surface-sunk); color: var(--faint);
+  display: flex; align-items: center; justify-content: center;
+}
+.archive-screen .arch-empty .etitle { font-size: 17px; font-weight: 650; }
+.archive-screen .arch-empty .etext { font-size: 13.5px; color: var(--muted); line-height: 1.5; max-width: 260px; }

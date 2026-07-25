@@ -1,0 +1,101 @@
+/* Share-with-GP screen — ported from designs/share.html, namespaced `shr-`.
+   Uses global tokens for theme-awareness. Single amber on interaction surfaces. */
+
+.shr-root { flex: 1 1 auto; display: flex; flex-direction: column; min-height: 0; }
+
+/* ---------------- QR state ---------------- */
+.shr-qr { flex: 1 1 auto; display: flex; flex-direction: column; min-height: 0; }
+.shr-qr-body {
+  flex: 1 1 auto; display: flex; flex-direction: column; align-items: center;
+  justify-content: center; text-align: center; padding: 6px 28px;
+}
+.shr-qrcard {
+  background: #fff; border-radius: 22px; padding: 14px;
+  box-shadow: 0 18px 40px -12px rgba(26,26,23,.3); border: 1px solid #ECEBE6;
+  line-height: 0;
+}
+.shr-qrcard img { width: 208px; height: 208px; display: block; border-radius: 8px; }
+.shr-qr-ph { width: 208px; height: 208px; border-radius: 8px; background: #F1F0EB; display: flex; align-items: center; justify-content: center; padding: 12px; box-sizing: border-box; font-size: 13px; color: #6B6B63; text-align: center; line-height: 1.35; }
+.shr-qr-link { font-size: 11px; word-break: break-all; opacity: 0.85; }
+.shr-qtitle { font-size: 22px; font-weight: 700; letter-spacing: -.02em; margin-top: 18px; }
+.shr-qsub { font-size: 14px; line-height: 1.45; color: var(--muted); margin-top: 6px; max-width: 300px; }
+.shr-qchips { display: flex; gap: 7px; margin-top: 14px; flex-wrap: wrap; justify-content: center; }
+.shr-qchip {
+  font-size: 12px; font-weight: 600; background: var(--surface); border: 1px solid var(--hairline);
+  border-radius: 20px; padding: 5px 11px; color: var(--text); box-shadow: var(--shadow);
+}
+.shr-qchip b { color: var(--accent-ink); }
+.shr-expiry { display: flex; align-items: center; gap: 7px; font-size: 12.5px; color: var(--faint); margin-top: 12px; }
+
+.shr-qr-foot { flex: 0 0 auto; padding: 12px 22px 30px; display: flex; align-items: center; gap: 10px; }
+.shr-btn {
+  flex: 1; height: 52px; border-radius: 15px; font: inherit; font-size: 15px; font-weight: 700;
+  padding: 0; display: flex; align-items: center; justify-content: center; gap: 8px; border: 0; cursor: pointer;
+}
+.shr-btn.primary { background: var(--accent); color: #fff; box-shadow: 0 10px 22px -6px color-mix(in srgb, var(--accent) 55%, transparent); }
+.shr-btn.ghost { background: var(--surface); color: var(--text); border: 1px solid var(--hairline); }
+.shr-btn:active { transform: scale(.98); }
+
+/* ---------------- DOC state ---------------- */
+.shr-doc { flex: 1 1 auto; display: flex; flex-direction: column; min-height: 0; }
+.shr-docbar {
+  flex: 0 0 auto; margin: 0 16px; background: var(--accent); color: #fff; border-radius: 16px;
+  padding: 14px 16px; display: flex; align-items: center; gap: 11px; cursor: pointer; border: 0;
+  width: calc(100% - 32px); text-align: left; font: inherit;
+}
+.shr-docbar:active { transform: scale(.99); }
+.shr-docbar .di { width: 38px; height: 38px; border-radius: 11px; background: rgba(255,255,255,.18); display: flex; align-items: center; justify-content: center; flex: 0 0 auto; }
+.shr-docbar .d1 { font-size: 15px; font-weight: 700; }
+.shr-docbar .d2 { font-size: 12px; opacity: .9; margin-top: 1px; }
+.shr-docbar .dchev { margin-left: auto; color: rgba(255,255,255,.9); flex: 0 0 auto; }
+
+.shr-patient { flex: 0 0 auto; margin: 12px 16px 0; display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding: 0 4px; }
+.shr-patient .pn { font-size: 17px; font-weight: 700; }
+.shr-patient .pm { font-size: 12.5px; color: var(--muted); margin-top: 2px; }
+.shr-patient .gen { font-size: 11px; color: var(--faint); text-align: right; flex: 0 0 auto; line-height: 1.35; }
+
+.shr-doc-body { flex: 1 1 auto; overflow-y: auto; padding: 14px 16px 26px; display: flex; flex-direction: column; gap: 16px; }
+.shr-sec .sh { font-size: 12px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--faint); margin: 0 4px 8px; display: flex; align-items: center; justify-content: space-between; }
+.shr-sec .sh .tab { font-size: 10.5px; background: var(--surface-sunk); color: var(--muted); border-radius: 20px; padding: 2px 8px; letter-spacing: .02em; }
+
+.shr-med { display: flex; align-items: center; gap: 11px; background: var(--surface); border: 1px solid var(--hairline); border-radius: 13px; padding: 10px 12px; }
+.shr-med + .shr-med { margin-top: 7px; }
+.shr-med .mi { width: 30px; height: 30px; border-radius: 8px; background: var(--surface-sunk); color: var(--muted); display: flex; align-items: center; justify-content: center; flex: 0 0 auto; }
+.shr-med .mn { font-size: 14.5px; font-weight: 600; }
+.shr-med .md { font-size: 12px; color: var(--faint); margin-top: 1px; }
+.shr-med .cat { margin-left: auto; font-size: 10.5px; font-weight: 700; padding: 2px 8px; border-radius: 20px; flex: 0 0 auto; }
+.shr-med .cat.nhs { background: var(--accent-tint); color: var(--accent-ink); }
+.shr-med .cat.priv { background: var(--tile-b); color: var(--tile-b-ink); }
+.shr-med .cat.otc { background: var(--surface-sunk); color: var(--muted); }
+
+/* Single amber interaction surface (legal rule: never graded/red) */
+.shr-ix { display: flex; align-items: flex-start; gap: 10px; border-radius: 13px; padding: 10px 12px; font-size: 13px; line-height: 1.4; background: var(--amber-tint); color: var(--amber-ink); }
+.shr-ix + .shr-ix { margin-top: 7px; }
+.shr-ix svg { flex: 0 0 auto; margin-top: 1px; color: var(--amber); }
+.shr-ix b { font-weight: 700; }
+
+.shr-arch { background: var(--surface); border: 1px dashed var(--hairline); border-radius: 13px; padding: 11px 13px; font-size: 13px; color: var(--muted); display: flex; align-items: center; gap: 9px; }
+.shr-arch b { color: var(--text); font-weight: 600; }
+
+.shr-attrib { display: flex; align-items: center; justify-content: center; gap: 6px; font-size: 11px; color: var(--faint); margin-top: 2px; }
+
+.shr-doc-foot { flex: 0 0 auto; display: flex; gap: 10px; padding: 12px 16px 26px; border-top: 1px solid var(--hairline); background: var(--app-bg); }
+.shr-dfbtn { flex: 1; height: 50px; border-radius: 14px; display: flex; align-items: center; justify-content: center; gap: 8px; font: inherit; font-size: 14.5px; font-weight: 700; border: 0; cursor: pointer; }
+.shr-dfbtn.ghost { background: var(--surface); color: var(--text); border: 1px solid var(--hairline); }
+.shr-dfbtn.primary { background: var(--accent); color: #fff; box-shadow: 0 10px 22px -6px color-mix(in srgb, var(--accent) 55%, transparent); }
+.shr-dfbtn:active { transform: scale(.98); }
+
+/* ---------------- PDF viewer (iOS Quick Look — stays light in both themes) ---------------- */
+.shr-pdf { position: absolute; inset: 0; z-index: 6; background: #E7E6E2; display: flex; flex-direction: column; border-radius: inherit; overflow: hidden; color: #1A1A17; }
+.shr-pdf .status { color: #1A1A17; }
+.shr-pdf-top { flex: 0 0 auto; height: 50px; display: flex; align-items: center; justify-content: space-between; padding: 0 18px; background: #fff; border-bottom: 1px solid #E4E3DE; }
+.shr-pdf-top .done { font-size: 16px; font-weight: 600; color: #0B6E62; background: none; border: 0; font-family: inherit; cursor: pointer; padding: 0; }
+.shr-pdf-top .fname { font-size: 13px; font-weight: 600; color: #6B6B63; }
+.shr-pdf-top .shr-glyph { color: #0B6E62; background: none; border: 0; cursor: pointer; padding: 0; display: flex; align-items: center; }
+.shr-pdf-notice { flex: 0 0 auto; padding: 8px 14px; font-size: 11px; line-height: 1.35; color: #6B4E1F; background: #FFF8E8; border-bottom: 1px solid #E4E3DE; }
+.shr-pdf-frame-wrap { flex: 1 1 auto; min-height: 0; background: #E7E6E2; }
+.shr-pdf-frame-wrap iframe { width: 100%; height: 100%; border: 0; display: block; }
+.shr-pdf-bottom { flex: 0 0 auto; padding: 11px 22px 24px; background: #fff; border-top: 1px solid #E4E3DE; display: flex; align-items: center; justify-content: space-between; }
+.shr-pdf-page-ind { font-size: 12.5px; color: #6B6B63; font-weight: 500; }
+.shr-pdf-share { display: flex; align-items: center; gap: 8px; color: #0B6E62; font-size: 14.5px; font-weight: 700; background: none; border: 0; font-family: inherit; cursor: pointer; padding: 0; }
+.shr-pdf-print { color: #6B6B63; background: none; border: 0; cursor: pointer; padding: 0; display: flex; align-items: center; }

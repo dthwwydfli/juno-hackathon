@@ -1,0 +1,54 @@
+/* Home screen — segmented filter + medication list. Reuses shared
+   .segwrap/.segment/.med from components.css; only screen-specific bits here. */
+
+.home-listbar {
+  flex: 0 0 auto;
+  padding: 16px 24px 8px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.home-listbar .label {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--faint);
+}
+.home-hint {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--faint);
+  margin-left: 10px;
+}
+.home-archive {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-left: auto;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--accent-ink);
+  background: none;
+  border: 0;
+}
+.home-archive:active { opacity: .6; }
+
+.home-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 2px 16px 120px;
+}
+
+/* Scoped fix: MedCard renders name/brand/dose as inline <span>s, so without
+   an explicit block context they run together. Foundation issue reported;
+   this override keeps Home faithful to the reference without editing shared code. */
+.home-list .med .body { display: flex; flex-direction: column; }
+
+.home-empty {
+  text-align: center;
+  color: var(--faint);
+  font-size: 14px;
+  padding: 40px 20px;
+}

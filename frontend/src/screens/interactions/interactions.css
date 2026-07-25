@@ -1,0 +1,136 @@
+/* Interactions list — single amber, one visual level (legal rule).
+   Amber is used only for the interaction cue; the GP note banner is teal. */
+
+.ix-label {
+  flex: 0 0 auto;
+  padding: 16px 24px 8px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: .07em;
+  text-transform: uppercase;
+  color: var(--faint);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.ix-label .lcount {
+  font-size: 11px;
+  letter-spacing: .03em;
+  text-transform: none;
+  background: var(--amber-tint);
+  color: var(--amber-ink);
+  padding: 3px 9px;
+  border-radius: 20px;
+}
+
+.ix-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 2px 18px 24px;
+}
+
+.ix-card {
+  background: var(--surface);
+  border: 1px solid color-mix(in srgb, var(--amber) 38%, var(--hairline));
+  border-radius: 18px;
+  overflow: hidden;
+  box-shadow: var(--shadow);
+}
+.ix-card .pad { padding: 14px 15px; }
+
+.ix-sevrow { display: flex; align-items: center; gap: 9px; margin-bottom: 12px; }
+.ix-tri {
+  width: 26px; height: 26px;
+  border-radius: 7px;
+  background: var(--amber-tint);
+  color: var(--amber);
+  display: flex; align-items: center; justify-content: center;
+  flex: 0 0 auto;
+}
+.ix-sevchip { font-size: 13px; font-weight: 650; color: var(--text); }
+.ix-tag {
+  margin-left: auto;
+  font-size: 11px; font-weight: 600;
+  color: var(--faint);
+  background: var(--surface-sunk);
+  padding: 3px 8px;
+  border-radius: 20px;
+}
+
+.ix-pair { display: flex; align-items: center; gap: 8px; }
+.ix-pill {
+  flex: 1; min-width: 0;
+  display: flex; align-items: center; gap: 9px;
+  background: var(--surface-sunk);
+  border-radius: 12px;
+  padding: 9px 10px;
+}
+.ix-ic {
+  width: 32px; height: 32px;
+  border-radius: 9px;
+  background: var(--surface);
+  color: var(--muted);
+  display: flex; align-items: center; justify-content: center;
+  flex: 0 0 auto;
+}
+.ix-pcol { display: flex; flex-direction: column; min-width: 0; }
+.ix-pn { font-size: 14px; font-weight: 650; line-height: 1.15; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ix-pt { font-size: 11px; color: var(--faint); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ix-swap { flex: 0 0 auto; color: var(--muted); display: flex; }
+
+.ix-reason { font-size: 13.5px; line-height: 1.5; color: var(--muted); margin-top: 12px; }
+
+.ix-readmore {
+  width: 100%;
+  border: 0;
+  border-top: 1px solid var(--hairline);
+  background: transparent;
+  padding: 12px 15px;
+  display: flex; align-items: center; justify-content: space-between;
+  font-size: 14px; font-weight: 600;
+  color: var(--accent-ink);
+}
+.ix-readmore:active { background: var(--surface-sunk); }
+.ix-readmore .r { display: flex; align-items: center; gap: 8px; }
+
+/* calm empty state */
+.ix-clear {
+  display: flex; align-items: center; gap: 12px;
+  background: var(--accent-tint);
+  border: 1px solid color-mix(in srgb, var(--accent) 30%, var(--hairline));
+  border-radius: 16px;
+  padding: 15px;
+}
+.ix-clear .ci {
+  width: 34px; height: 34px;
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--accent);
+  display: flex; align-items: center; justify-content: center;
+  flex: 0 0 auto;
+  box-shadow: var(--shadow);
+}
+.ix-clear .c1 { font-size: 14px; font-weight: 650; color: var(--accent-ink); }
+.ix-clear .c2 { font-size: 12.5px; color: var(--muted); margin-top: 1px; }
+
+/* GP note banner — teal, sits above the 96px bottom nav */
+.ix-gp {
+  flex: 0 0 auto;
+  margin: 0 0 96px;
+  padding: 13px 20px;
+  display: flex; align-items: center; gap: 11px;
+  background: var(--accent-tint);
+  border-top: 1px solid color-mix(in srgb, var(--accent) 22%, var(--hairline));
+}
+.ix-gp .gi {
+  width: 32px; height: 32px;
+  border-radius: 50%;
+  background: var(--surface);
+  color: var(--accent);
+  display: flex; align-items: center; justify-content: center;
+  flex: 0 0 auto;
+  box-shadow: var(--shadow);
+}
+.ix-gp .gt { font-size: 13.5px; font-weight: 600; color: var(--accent-ink); line-height: 1.35; }
+.ix-gp .gt small { display: block; font-weight: 500; color: var(--muted); font-size: 12px; margin-top: 1px; }

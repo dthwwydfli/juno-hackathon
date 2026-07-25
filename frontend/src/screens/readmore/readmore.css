@@ -1,0 +1,127 @@
+/* Interaction detail — single amber only (legal rule): hero + affect chips
+   are amber; helpful/OK cues (bullets, source, GP note) are teal. Never red. */
+
+.rm-body {
+  padding: 16px 18px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+/* hero risk cue */
+.rm-hero {
+  background: var(--amber-tint);
+  border: 1px solid color-mix(in srgb, var(--amber) 45%, var(--hairline));
+  border-radius: 20px;
+  padding: 16px;
+}
+.rm-hrow { display: flex; align-items: center; gap: 9px; margin-bottom: 13px; }
+.rm-htri {
+  width: 30px; height: 30px;
+  border-radius: 9px;
+  background: var(--surface);
+  color: var(--amber);
+  display: flex; align-items: center; justify-content: center;
+  flex: 0 0 auto;
+}
+.rm-hlabel { font-size: 13px; font-weight: 700; letter-spacing: .03em; text-transform: uppercase; color: var(--amber-ink); }
+
+.rm-pair { display: flex; align-items: center; gap: 8px; }
+.rm-pill {
+  flex: 1; min-width: 0;
+  display: flex; align-items: center; gap: 8px;
+  background: var(--surface);
+  border-radius: 12px;
+  padding: 9px 10px;
+}
+.rm-ic {
+  width: 30px; height: 30px;
+  border-radius: 8px;
+  background: var(--surface-sunk);
+  color: var(--muted);
+  display: flex; align-items: center; justify-content: center;
+  flex: 0 0 auto;
+}
+.rm-pcol { display: flex; flex-direction: column; min-width: 0; }
+.rm-pn { font-size: 14px; font-weight: 650; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rm-pt { font-size: 11px; color: var(--faint); margin-top: 2px; }
+.rm-swap { flex: 0 0 auto; color: var(--amber); display: flex; }
+
+.rm-sec { display: flex; flex-direction: column; gap: 9px; }
+.rm-sh { font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--faint); padding: 0 2px; }
+.rm-para { font-size: 14.5px; line-height: 1.55; color: var(--text); }
+
+.rm-affects { display: flex; flex-wrap: wrap; gap: 9px; }
+.rm-affect {
+  display: flex; align-items: center; gap: 8px;
+  background: var(--amber-tint);
+  border: 1px solid color-mix(in srgb, var(--amber) 45%, var(--hairline));
+  color: var(--amber-ink);
+  border-radius: 12px;
+  padding: 9px 12px;
+  font-size: 13.5px; font-weight: 600;
+}
+.rm-affect svg { flex: 0 0 auto; }
+
+.rm-bullets { display: flex; flex-direction: column; gap: 11px; }
+.rm-bul { display: flex; gap: 11px; align-items: flex-start; font-size: 14px; line-height: 1.5; color: var(--text); }
+.rm-bi {
+  width: 24px; height: 24px;
+  border-radius: 7px;
+  background: var(--accent-tint);
+  color: var(--accent-ink);
+  display: flex; align-items: center; justify-content: center;
+  flex: 0 0 auto;
+  margin-top: 1px;
+}
+
+.rm-source {
+  display: flex; align-items: center; gap: 12px;
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+  border-radius: 14px;
+  padding: 13px 14px;
+  box-shadow: var(--shadow);
+}
+.rm-si {
+  width: 38px; height: 38px;
+  border-radius: 11px;
+  background: var(--accent-tint);
+  color: var(--accent-ink);
+  display: flex; align-items: center; justify-content: center;
+  flex: 0 0 auto;
+}
+.rm-s1 { font-size: 13.5px; font-weight: 650; }
+.rm-s2 { font-size: 12px; color: var(--faint); margin-top: 2px; }
+.rm-verified {
+  margin-left: auto;
+  font-size: 11px; font-weight: 700;
+  color: var(--accent-ink);
+  background: var(--accent-tint);
+  border-radius: 20px;
+  padding: 3px 9px;
+  display: flex; align-items: center; gap: 5px;
+  flex: 0 0 auto;
+}
+
+/* GP note banner — teal, docked at the bottom of the frame */
+.rm-gp {
+  flex: 0 0 auto;
+  padding: 13px 20px;
+  display: flex; align-items: center; gap: 11px;
+  background: var(--accent-tint);
+  border-top: 1px solid color-mix(in srgb, var(--accent) 22%, var(--hairline));
+}
+.rm-gp .gi {
+  width: 32px; height: 32px;
+  border-radius: 50%;
+  background: var(--surface);
+  color: var(--accent);
+  display: flex; align-items: center; justify-content: center;
+  flex: 0 0 auto;
+  box-shadow: var(--shadow);
+}
+.rm-gp .gt { font-size: 13.5px; font-weight: 600; color: var(--accent-ink); line-height: 1.35; }
+.rm-gp .gt small { display: block; font-weight: 500; color: var(--muted); font-size: 12px; margin-top: 1px; }
+
+.rm-fallback { padding: 40px 24px; text-align: center; color: var(--muted); font-size: 15px; }

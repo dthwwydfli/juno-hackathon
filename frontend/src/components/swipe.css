@@ -1,0 +1,29 @@
+.swipe-wrap {
+  position: relative;
+  border-radius: 18px;
+  overflow: hidden;
+}
+.swipe-action {
+  position: absolute;
+  top: 0; right: 0; bottom: 0;
+  border: 0;
+  background: var(--amber);
+  color: #fff;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.swipe-front {
+  position: relative;
+  z-index: 1;
+  touch-action: pan-y;
+  will-change: transform;
+}
+.swipe-front:not(.dragging) {
+  transition: transform .22s cubic-bezier(.2,.8,.2,1);
+}
