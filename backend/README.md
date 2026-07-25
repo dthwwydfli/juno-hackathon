@@ -1,0 +1,159 @@
+# Juno medication safety — backend
+
+FastAPI backend for NHS dm+d barcode lookup, personal medicine cabinet, interaction checks (MedData + Supp.AI + OpenFDA), GP PDF/QR sharing.
+
+## Quick start
+
+```bash
+cd backend
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -e ".[dev]"
+python scripts/build_sample_dmd.py
+cp .env.example .env   # add MEDDATA_API_KEY (optional OPENFDA_API_KEY)
+# With TRUD_API_KEY + TRUD_DMD_ITEM_ID set, run `python scripts/ingest_dmd.py --download`
+# or restart the API — it auto-syncs from TRUD when the dm+d DB is still the sample file.
+uvicorn app.main:app --reload --host 0.0.0.0 --port 8000 --app-dir .
+```
+
+Open:
+
+- API docs: http://localhost:8000/docs
+- Dev barcode scanner: http://localhost:8000/dev/scan
+- Dev GP QR: http://localhost:8000/dev/qr
+
+## Environment variables
+
+See [`.env.example`](.env.example).
+
+| Variable | Purpose |
+|----------|---------|
+| `DMD_DB_PATH` | dm+d SQLite (from TRUD ingest or sample builder) |
+| `APP_DB_PATH` | Application SQLite |
+| `TRUD_API_KEY` / `TRUD_DMD_ITEM_ID` | Automated dm+d download |
+| `OPENFDA_API_KEY` | Optional higher rate limits for FDA label excerpts |
+| `MEDDATA_API_KEY` | [MedData](https://meddata.anthesia.io) interaction checks (`X-API-Key` header). Free tier: `POST /api/v1/signup` with email |
+| `MEDDATA_BASE_URL` | Default `https://meddata.anthesia.io` |
+| `PUBLIC_BASE_URL` | Base URL embedded in GP QR links |
+| `GP_TOKEN_TTL_HOURS` | Share link lifetime |
+
+Interaction checks use **MedData first** (ingredient names parsed from scanned dm+d `display_name` strings). **[Supp.AI](https://supp.ai/docs/api)** runs only when MedData returns no match for that pair (no API key; Semantic Scholar dataset license).
+
+## NHS dm+d (TRUD)
+
+1. Register at [TRUD](https://isd.digital.nhs.uk/trud/) and subscribe to **dm+d**.
+2. Ingest a release zip:
+
+```bash
+python scripts/ingest_dmd.py --zip /path/to/dmd_release.zip
+```
+
+Or download with API credentials:
+
+```bash
+export TRUD_API_KEY=...
+export TRUD_DMD_ITEM_ID=...
+python scripts/ingest_dmd.py --download
+```
+
+For demos without TRUD:
+
+```bash
+python scripts/build_sample_dmd.py
+python scripts/seed_demo_cabinet.py   # mock meds for GP QR demo (user: demo)
+python scripts/seed_meddata_demo_cabinet.py   # optional: backend-only MedData demo cabinet (destructive for demo user in SQLite)
+```
+
+## GP mock QR demo
+
+1. Seed mock medicines (optional if you use demo-share):
+
+```bash
+python scripts/seed_demo_cabinet.py
+```
+
+2. Start the API and open the dev QR page using a URL your phone can reach (LAN IP or tunnel), e.g. `http://192.168.1.x:8000/dev/qr`.
+
+3. Click **Generate mock demo QR** — calls `POST /gp/demo-share` (seeds demo data + creates a share token).
+
+4. Scan the QR; the phone opens the clinician PDF (`GET /gp/summary/{token}.pdf`) with active medicines (dose, schedule, start date), archived medicines, interaction highlights, and disclaimers.
+
+The QR encodes `{page-origin}/gp/summary/{token}.pdf` (not `PUBLIC_BASE_URL`), so use the same host on your laptop and phone. For remote demos, open `/dev/qr` via ngrok and set `PUBLIC_BASE_URL` to that URL if other clients need absolute links.
+
+**GP share token + PDF**
+
+```bash
+curl -s -X POST http://localhost:8000/gp/demo-share -H "X-User-Id: demo" | jq
+
+curl -s -X POST http://localhost:8000/gp/share-token \
+  -H "Content-Type: application/json" \
+  -H "X-User-Id: demo" \
+  -d '{"patient_label": "Demo Patient"}' | jq
+
+# Open pdf_url from response in browser or:
+curl -o summary.pdf "http://localhost:8000/gp/summary/<token>.pdf"
+```
+
+Default user header: `X-User-Id: demo`.
+
+**Lookup barcode**
+
+```bash
+curl -s "http://localhost:8000/lookup/barcode?code=5012345678901" | jq
+```
+
+**Add medicine**
+
+```bash
+curl -s -X POST http://localhost:8000/medications \
+  -H "Content-Type: application/json" \
+  -H "X-User-Id: demo" \
+  -d '{
+    "display_name": "Paracetamol 500mg tablets (sample)",
+    "category": "otc",
+    "dosage": "2 tablets",
+    "schedule": {"times": ["08:00", "20:00"]},
+    "gtin": "5012345678901"
+  }' | jq
+```
+
+**Check interactions** (needs ≥2 active meds; MedData primary, Supp.AI gap-fill, pair-relevant OpenFDA excerpts)
+
+Smoke-test six scanned-name pairs against live APIs:
+
+```bash
+python scripts/smoke_interactions.py
+```
+
+```bash
+curl -s -X POST http://localhost:8000/interactions/check \
+  -H "Content-Type: application/json" \
+  -H "X-User-Id: demo" \
+  -d '{}' | jq
+```
+
+**Interaction detail**
+
+```bash
+curl -s http://localhost:8000/interactions/1 -H "X-User-Id: demo" | jq
+```
+
+## Tests
+
+```bash
+pytest
+```
+
+## Frontend integration
+
+- Send `X-User-Id` on cabinet, interaction, and GP routes.
+- CORS origins configured via `CORS_ORIGINS` (includes `http://localhost:5173`).
+- Product PRD: [`../plan.md`](../plan.md).
+- Wiring contract: [`../first.md`](../first.md).
+- Vite app: [`../frontend/`](../frontend/).
+
+**GP QR (future app):**
+
+- Patient: `POST /gp/share-token` with the authenticated user id; show a QR encoding `{publicOrigin}/gp/summary/{token}.pdf` (use production `PUBLIC_BASE_URL`, not localhost).
+- Clinician: scan opens the PDF; no `X-User-Id` required. Links expire after `GP_TOKEN_TTL_HOURS`.
+- Hackathon mock path: `POST /gp/demo-share` with `X-User-Id: demo` only.

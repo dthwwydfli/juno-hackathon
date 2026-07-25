@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Dev GP QR</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 640px; margin: 1rem auto; padding: 0 1rem; }
+    #qrcode { margin: 1rem 0; }
+    pre { background: #f4f4f4; padding: 1rem; font-size: 12px; overflow-x: auto; }
+    .note { font-size: 0.9rem; color: #444; }
+    button { margin-right: 0.5rem; margin-bottom: 0.5rem; }
+  </style>
+</head>
+<body>
+  <h1>GP share QR (dev)</h1>
+  <p class="note">
+    Scan the QR on a phone to open the doctor PDF. Open this page using your machine’s
+    LAN IP or a tunnel URL (e.g. ngrok) so the encoded link is reachable from your phone.
+  </p>
+  <label>Patient label (optional): <input id="label" type="text" placeholder="Demo patient" /></label>
+  <div>
+    <button type="button" id="mock">Generate mock demo QR</button>
+    <button type="button" id="gen">Generate token &amp; QR</button>
+  </div>
+  <div id="qrcode"></div>
+  <p><a id="pdfLink" href="#" target="_blank" rel="noopener">Open PDF</a></p>
+  <pre id="out"></pre>
+  <script>
+    function pdfUrlForToken(token) {
+      return `${window.location.origin}/gp/summary/${token}.pdf`;
+    }
+
+    function showShare(data) {
+      document.getElementById('out').textContent = JSON.stringify(data, null, 2);
+      const url = pdfUrlForToken(data.token);
+      document.getElementById('qrcode').innerHTML = '';
+      new QRCode(document.getElementById('qrcode'), { text: url, width: 256, height: 256 });
+      const a = document.getElementById('pdfLink');
+      a.href = url;
+      a.textContent = url;
+    }
+
+    document.getElementById('mock').onclick = async () => {
+      const res = await fetch('/gp/demo-share', {
+        method: 'POST',
+        headers: { 'X-User-Id': 'demo' },
+      });
+      if (!res.ok) {
+        document.getElementById('out').textContent = await res.text();
+        return;
+      }
+      showShare(await res.json());
+    };
+
+    document.getElementById('gen').onclick = async () => {
+      const label = document.getElementById('label').value.trim() || null;
+      const res = await fetch('/gp/share-token', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-User-Id': 'demo',
+        },
+        body: JSON.stringify({ patient_label: label }),
+      });
+      if (!res.ok) {
+        document.getElementById('out').textContent = await res.text();
+        return;
+      }
+      showShare(await res.json());
+    };
+  </script>
+</body>
+</html>

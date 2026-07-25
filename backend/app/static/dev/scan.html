@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Dev barcode scan</title>
+  <script src="https://unpkg.com/@zxing/library@0.21.3/umd/index.min.js"></script>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 640px; margin: 1rem auto; padding: 0 1rem; }
+    video { width: 100%; border-radius: 8px; background: #111; }
+    pre { background: #f4f4f4; padding: 1rem; overflow: auto; font-size: 12px; }
+    .err { color: #b00020; }
+  </style>
+</head>
+<body>
+  <h1>Barcode scan (dev)</h1>
+  <p>Point camera at GTIN (EAN-13). Uses <code>POST /lookup/barcode</code>.</p>
+  <video id="video" playsinline></video>
+  <p id="status">Starting camera…</p>
+  <label>Or enter code manually: <input id="manual" type="text" /> <button type="button" id="lookupBtn">Lookup</button></label>
+  <pre id="out"></pre>
+  <script>
+    const out = document.getElementById('out');
+    const status = document.getElementById('status');
+    const codeReader = new ZXing.BrowserMultiFormatReader();
+
+    async function lookup(code) {
+      status.textContent = 'Looking up ' + code + '…';
+      try {
+        const res = await fetch('/lookup/barcode', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ code, code_type: 'gtin' }),
+        });
+        const data = await res.json();
+        out.textContent = JSON.stringify(data, null, 2);
+        status.textContent = res.ok ? 'Found' : 'Not found';
+        if (!res.ok) status.className = 'err';
+      } catch (e) {
+        status.textContent = e.message;
+        status.className = 'err';
+      }
+    }
+
+    document.getElementById('lookupBtn').onclick = () => {
+      const v = document.getElementById('manual').value.trim();
+      if (v) lookup(v);
+    };
+
+    (async () => {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+        document.getElementById('video').srcObject = stream;
+        await document.getElementById('video').play();
+        status.textContent = 'Scanning…';
+        codeReader.decodeFromVideoDevice(undefined, 'video', (result, err) => {
+          if (result) {
+            const text = result.getText();
+            status.textContent = 'Scanned: ' + text;
+            lookup(text);
+          }
+        });
+      } catch (e) {
+        status.textContent = 'Camera error: ' + e.message + ' — use manual entry.';
+        status.className = 'err';
+      }
+    })();
+  </script>
+</body>
+</html>
