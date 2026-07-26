@@ -1,5 +1,9 @@
 // End-to-end check: add a medication via the real form, confirm it persists and reaches Home.
 import puppeteer from 'puppeteer';
+
+// Must match STORAGE_KEY in src/data/store.tsx — a stale key silently made every
+// persistence assertion below vacuously pass.
+const STORAGE_KEY = 'piyp:state:v4';
 const BASE = 'http://localhost:5173';
 const browser = await puppeteer.launch({ headless: 'new', args: ['--no-sandbox'] });
 const page = await browser.newPage();
@@ -13,7 +17,6 @@ await page.evaluate(() => localStorage.clear());
 await page.goto(BASE + '/add', { waitUntil: 'networkidle0' });
 
 // type into the first two text inputs (medication name, brand) + dose
-const inputs = await page.$$('input.text-input, input[type="text"], input:not([type])');
 async function typeInto(placeholderIncludes, value) {
   const handles = await page.$$('input');
   for (const h of handles) {
@@ -37,7 +40,7 @@ await new Promise(r => setTimeout(r, 700));
 const urlAfterSave = page.url();
 
 // read persisted state
-const persisted = await page.evaluate(() => localStorage.getItem('piyp:state:v2'));
+const persisted = await page.evaluate((k) => localStorage.getItem(k), STORAGE_KEY);
 const hasParacetamol = persisted ? persisted.includes('Paracetamol') : false;
 
 // reload to prove persistence, then check Home renders it

@@ -1,5 +1,9 @@
 // Verify WhatsApp-style swipe-to-archive on a Private/OTC med row.
 import puppeteer from 'puppeteer';
+
+// Must match STORAGE_KEY in src/data/store.tsx — a stale key silently made every
+// persistence assertion below vacuously pass.
+const STORAGE_KEY = 'piyp:state:v4';
 const BASE = 'http://localhost:5173';
 const browser = await puppeteer.launch({ headless: 'new', args: ['--no-sandbox'] });
 const page = await browser.newPage();
@@ -51,13 +55,15 @@ await page.evaluate(() => document.querySelector('.swipe-action')?.click());
 await new Promise(r => setTimeout(r, 300));
 
 const afterText = await page.evaluate(() => document.querySelector('.home-list')?.textContent || '');
-const persisted = await page.evaluate(() => localStorage.getItem('piyp:state:v2') || '');
+const persisted = await page.evaluate((k) => localStorage.getItem(k) || '', STORAGE_KEY);
 const vitaminArchived = /"id":"vitamin-d"[^}]*"status":"archived"|"status":"archived"[^}]*"id":"vitamin-d"/.test(persisted.replace(/\s/g, ''));
 
 console.log(JSON.stringify({
   hadVitaminBefore: /Vitamin D/.test(beforeText),
   actionRevealedOnSwipe: actionVisible,
   vitaminGoneAfterArchive: !/Vitamin D/.test(afterText),
-  vitaminArchivedInStore: /vitamin-d/.test(persisted) && /archived/.test(persisted),
+  // The strict pairing, not `/vitamin-d/ && /archived/` — that loose form
+  // passes whenever *any* medication in the store is archived.
+  vitaminArchivedInStore: vitaminArchived,
 }, null, 2));
 await browser.close();
