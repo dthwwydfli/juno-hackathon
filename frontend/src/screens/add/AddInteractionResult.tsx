@@ -1,7 +1,8 @@
 import { PhoneFrame, StatusBar, SubHeader, GpNote, HomeButton } from '../../components/Frame';
-import { Icon, iconForRoute } from '../../components/Icon';
+import { Icon } from '../../components/Icon';
+import { iconForRoute } from '../../components/icon-route';
 import type { Interaction, Medication } from '../../data/types';
-import '../warning/warning.css';
+import './interaction-warning.css';
 import './add.css';
 
 const norm = (s: string) => s.trim().toLowerCase();

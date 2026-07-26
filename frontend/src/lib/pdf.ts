@@ -1,4 +1,7 @@
-import { jsPDF } from 'jspdf';
+// jsPDF drags html2canvas and dompurify in with it — roughly 380 kB that is only
+// reachable from the Share screen. Imported dynamically below so it stays out of
+// the entry chunk a phone downloads to see the landing page.
+import type { jsPDF } from 'jspdf';
 import type { AppState, Interaction } from '../data/types';
 import { fetchApiUrl } from './api';
 import { checkInteractions } from './interactions';
@@ -68,9 +71,13 @@ function byCategory<T extends { category: string }>(meds: T[]): T[] {
 }
 
 /** Build a real A4 medication-summary PDF from the live state. */
-export function buildSummaryPdf(state: AppState, interactions?: Interaction[]): jsPDF {
+export async function buildSummaryPdf(
+  state: AppState,
+  interactions?: Interaction[],
+): Promise<jsPDF> {
   const ix = interactions ?? checkInteractions(state.medications);
-  const doc = new jsPDF({ unit: 'pt', format: 'a4' });
+  const { jsPDF: JsPDF } = await import('jspdf');
+  const doc = new JsPDF({ unit: 'pt', format: 'a4' });
   const W = doc.internal.pageSize.getWidth();
   const M = 48;
   let y = 56;
@@ -223,7 +230,7 @@ export async function sharePdfLink(url: string): Promise<'shared' | 'copied'> {
 
 /** Generate the PDF and share it (Web Share API with files) or fall back to download. */
 export async function shareOrDownloadPdf(state: AppState): Promise<'shared' | 'downloaded'> {
-  const doc = buildSummaryPdf(state);
+  const doc = await buildSummaryPdf(state);
   const blob = doc.output('blob');
   const filename = 'medication-summary.pdf';
   const file = new File([blob], filename, { type: 'application/pdf' });
@@ -246,7 +253,7 @@ export async function shareOrDownloadPdf(state: AppState): Promise<'shared' | 'd
 }
 
 /** A blob URL for previewing the PDF inline (e.g. in an <iframe> Quick-Look mock). */
-export function pdfObjectUrl(state: AppState): string {
-  const doc = buildSummaryPdf(state);
+export async function pdfObjectUrl(state: AppState): Promise<string> {
+  const doc = await buildSummaryPdf(state);
   return URL.createObjectURL(doc.output('blob'));
 }

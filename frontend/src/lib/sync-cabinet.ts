@@ -68,11 +68,6 @@ export function medicationCabinetKey(m: Medication): string {
   return (m.gtin || toDisplayName(m)).toLowerCase();
 }
 
-/** @deprecated alias */
-function cabinetKey(m: Medication): string {
-  return medicationCabinetKey(m);
-}
-
 /** Fingerprint for interaction cache — stable across client-side med ids. */
 export function interactionCabinetFingerprint(meds: Medication[]): string {
   return meds
@@ -111,13 +106,13 @@ export async function syncCabinetToBackend(
 
   const desiredActive = medications.filter((m) => m.status === 'active');
   const desiredArchived = medications.filter((m) => m.status === 'archived');
-  const desiredActiveKeys = new Set(desiredActive.map(cabinetKey));
-  const desiredArchivedKeys = new Set(desiredArchived.map(cabinetKey));
+  const desiredActiveKeys = new Set(desiredActive.map(medicationCabinetKey));
+  const desiredArchivedKeys = new Set(desiredArchived.map(medicationCabinetKey));
 
   const syncWrites: Promise<unknown>[] = [];
 
   for (const m of desiredActive) {
-    const key = cabinetKey(m);
+    const key = medicationCabinetKey(m);
     const existing = remoteActive.get(key) || remoteArchived.get(key);
     const schedule = {
       times: m.times,
@@ -150,7 +145,7 @@ export async function syncCabinetToBackend(
   }
 
   for (const m of desiredArchived) {
-    const key = cabinetKey(m);
+    const key = medicationCabinetKey(m);
     const existing = remoteActive.get(key) || remoteArchived.get(key);
     if (existing && !existing.archived_at) {
       syncWrites.push(

@@ -46,10 +46,15 @@ export function Home() {
     };
   }, [state.medications]);
 
-  const ixLoading = useMemo(() => {
-    void ixTick;
-    return getLiveRefreshState() === 'loading';
-  }, [ixTick, state.medications]);
+  // The three memos below read module-level interaction-cache state that the
+  // linter cannot see, so `ixTick` — bumped when a refresh settles — is what
+  // re-runs them. It looks like an unnecessary dependency; it is the only one
+  // that matters.
+  // oxlint-disable react-hooks/exhaustive-deps
+  const ixLoading = useMemo(
+    () => getLiveRefreshState() === 'loading',
+    [ixTick, state.medications],
+  );
 
   const flagged = useMemo(
     () => flaggedMedNames(state.medications),
@@ -57,7 +62,6 @@ export function Home() {
   );
 
   const ixNotice = useMemo(() => {
-    void ixTick;
     if (getLiveRefreshState() === 'loading') return null;
     const stale = getStaleInteractionReason();
     if (stale) {
@@ -68,6 +72,7 @@ export function Home() {
     }
     return getIncompleteCheckReason();
   }, [ixTick, state.medications]);
+  // oxlint-enable react-hooks/exhaustive-deps
 
   const counts = useMemo(() => {
     const c: Record<Category, number> = { NHS: 0, Private: 0, OTC: 0 };

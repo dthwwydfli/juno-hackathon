@@ -1,5 +1,6 @@
 import { Modal, GpNote } from '../../components/Frame';
-import { Icon, iconForRoute } from '../../components/Icon';
+import { Icon } from '../../components/Icon';
+import { iconForRoute } from '../../components/icon-route';
 import type { Medication } from '../../data/types';
 
 /** Shown after save when interaction check found no hits involving this medicine. */

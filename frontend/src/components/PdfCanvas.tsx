@@ -106,3 +106,7 @@ export function PdfCanvas({ url, onPages }: Props) {
     </div>
   );
 }
+
+// Default export so Share.tsx can React.lazy() this module: pdfjs plus its 2.2 MB
+// worker is only reachable from the Share screen's PDF tab.
+export default PdfCanvas;

@@ -3,7 +3,8 @@ import { PhoneFrame, StatusBar, SubHeader } from '../../components/Frame';
 import { Icon } from '../../components/Icon';
 import { ChipGroup } from '../../components/form/Form';
 import { useStore } from '../../data/store';
-import { useTheme, type Theme } from '../../lib/theme';
+import { useTheme } from '../../lib/theme';
+import type { Theme } from '../../lib/theme-core';
 import './settings.css';
 
 const themeOptions: { value: Theme; label: string }[] = [

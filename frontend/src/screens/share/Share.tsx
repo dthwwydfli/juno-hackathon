@@ -1,9 +1,10 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { PhoneFrame, StatusBar, SubHeader } from '../../components/Frame';
 import { Icon } from '../../components/Icon';
 import { PillGlyph } from '../../components/PillGlyph';
-import { PdfCanvas } from '../../components/PdfCanvas';
+// pdfjs + its worker only matter on the PDF tab; keep them out of the entry chunk.
+const PdfCanvas = lazy(() => import('../../components/PdfCanvas'));
 import { useStore } from '../../data/store';
 import { refreshInteractions, checkInteractions } from '../../lib/interactions';
 import { qrDataUrl } from '../../lib/qr';
@@ -69,6 +70,9 @@ export function Share() {
   /** The share snapshot is frozen at token time, so wait for the check to finish. */
   const [ixReady, setIxReady] = useState(false);
 
+  // `ixTick` looks redundant but is the only signal here: checkInteractions
+  // reads module-level cache state the linter cannot follow.
+  // oxlint-disable-next-line react-hooks/exhaustive-deps
   const interactions = useMemo(() => checkInteractions(state.medications), [state.medications, ixTick]);
 
   // Runs for every view: opening the PDF directly must not produce a summary
@@ -82,9 +86,18 @@ export function Share() {
 
   useEffect(() => {
     if (view !== 'pdf') return;
-    const localUrl = pdfObjectUrl(state);
-    setPdfPreviewUrl(localUrl);
+    let live = true;
+    void pdfObjectUrl(state).then((localUrl) => {
+      // jsPDF now loads on demand, so this can resolve after the effect has
+      // been torn down. Revoke straight away rather than leaking the blob.
+      if (!live) {
+        URL.revokeObjectURL(localUrl);
+        return;
+      }
+      setPdfPreviewUrl(localUrl);
+    });
     return () => {
+      live = false;
       setPdfPreviewUrl((prev) => {
         if (prev) URL.revokeObjectURL(prev);
         return '';
@@ -126,6 +139,9 @@ export function Share() {
       }
     })();
     return () => { live = false; };
+    // Keyed on `syncKey` (a cabinet fingerprint) rather than `state`, so an
+    // unrelated store write does not mint a fresh GP token and QR code.
+    // oxlint-disable-next-line react-hooks/exhaustive-deps
   }, [view, syncKey, state.profile.name, ixReady]);
 
   useEffect(() => {
@@ -170,6 +186,9 @@ export function Share() {
       }
     })();
     return () => { live = false; };
+    // Keyed on `syncKey` (a cabinet fingerprint) rather than `state`, so an
+    // unrelated store write does not mint a fresh GP token and QR code.
+    // oxlint-disable-next-line react-hooks/exhaustive-deps
   }, [view, syncKey, state.profile.name, ixReady]);
 
   const savePdf = async () => {
@@ -237,7 +256,9 @@ export function Share() {
           )}
           <div className="shr-pdf-frame-wrap">
             {pdfPreviewUrl ? (
-              <PdfCanvas url={pdfPreviewUrl} onPages={onPdfPages} />
+              <Suspense fallback={<div className="shr-qr-ph">Loading PDF…</div>}>
+                <PdfCanvas url={pdfPreviewUrl} onPages={onPdfPages} />
+              </Suspense>
             ) : (
               <div className="shr-qr-ph">Loading PDF…</div>
             )}

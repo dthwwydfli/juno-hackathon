@@ -2,7 +2,14 @@ import { useEffect, useState } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
 import { PhoneFrame, StatusBar } from '../../components/Frame';
 import { Icon } from '../../components/Icon';
-import { ApiError, fetchApiUrl, formatApiReachabilityError, localtunnel511Message } from '../../lib/api';
+import {
+  ApiError,
+  apiBaseUrl,
+  fetchApiUrl,
+  formatApiReachabilityError,
+  localtunnel511Message,
+  pdfOrigin,
+} from '../../lib/api';
 import { gpPdfUrlForToken } from '../../lib/sync-cabinet';
 import { APP_NAME } from '../../lib/brand';
 import './gp-share.css';
@@ -59,7 +66,11 @@ export function GpShareView() {
           throw new ApiError('This share link has expired.', 410);
         }
         if (res.status === 404) {
-          throw new ApiError('This link is invalid or has expired.', 404);
+          const mismatch =
+            pdfOrigin() !== apiBaseUrl()
+              ? ' (The app may be pointing at a different API for PDFs than for share links.)'
+              : '';
+          throw new ApiError(`This link is invalid or has expired.${mismatch}`, 404);
         }
         if (!res.ok) {
           if (res.status >= 500) {

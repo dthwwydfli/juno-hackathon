@@ -59,7 +59,16 @@ function reducer(state: AppState, action: Action): AppState {
 function load(): AppState {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) return applyAutoArchive({ ...initialState, ...JSON.parse(raw) });
+    if (!raw) return applyAutoArchive(initialState);
+    const saved = JSON.parse(raw) as Partial<AppState>;
+    // `profile` is merged a level deeper than the rest: a top-level spread
+    // replaces the whole object, so a state persisted before a field was added
+    // to Profile would come back with that field undefined.
+    return applyAutoArchive({
+      ...initialState,
+      ...saved,
+      profile: { ...initialState.profile, ...saved.profile },
+    });
   } catch { /* ignore */ }
   return applyAutoArchive(initialState);
 }

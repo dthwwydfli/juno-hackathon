@@ -7,7 +7,8 @@ import {
 } from '@zxing/library';
 import { useNavigate, useParams } from 'react-router-dom';
 import { PhoneFrame, StatusBar, SubHeader, Sheet } from '../../components/Frame';
-import { Icon, iconForRoute } from '../../components/Icon';
+import { Icon } from '../../components/Icon';
+import { iconForRoute } from '../../components/icon-route';
 import { SelectField, ChipGroup } from '../../components/form/Form';
 import { TextField } from '../../components/form/Form';
 import { useStore } from '../../data/store';

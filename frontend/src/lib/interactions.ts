@@ -228,14 +228,6 @@ export async function interactionsForAsync(med: Medication, existing: Medication
   return list.filter((i) => interactionInvolvesMed(med, i));
 }
 
-/** @deprecated sync — use interactionsForAsync */
-export function interactionsFor(med: Medication, existing: Medication[]): Interaction[] {
-  return checkInteractions([...existing, med]).filter((i) => {
-    const name = norm(med.name);
-    return norm(i.a) === name || norm(i.b) === name;
-  });
-}
-
 export function flaggedMedNames(meds: Medication[]): Set<string> {
   const active = checkInteractions(meds);
   const names = new Set<string>();
