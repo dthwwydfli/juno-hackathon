@@ -57,6 +57,20 @@ export TRUD_DMD_ITEM_ID=...
 python scripts/ingest_dmd.py --download
 ```
 
+### Shipping dm+d to a deploy
+
+`data/dmd.sqlite` is gitignored and far too big to commit, so deployed images carry a
+packed copy instead. After any ingest, rebuild it:
+
+```bash
+python scripts/build_slim_dmd.py   # → data/dmd.slim.sqlite.gz (~4 MB, 100k GTINs)
+```
+
+Commit the `.gz`. The Dockerfile copies it in and `scripts/docker_entrypoint.sh` unpacks
+it to `DMD_DB_PATH` on boot. Skip this and the container falls back to the 3-row sample —
+`/health` reports `"dmd_ready": false` and **every barcode scan 404s**. Rows with no GTIN
+are dropped (they can never match a scan), which is what takes 53 MB down to 4 MB.
+
 For demos without TRUD:
 
 ```bash

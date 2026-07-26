@@ -6,6 +6,9 @@ COPY pyproject.toml README.md ./
 COPY app ./app
 COPY scripts ./scripts
 COPY data/dmd.sample.sqlite ./data/dmd.sample.sqlite
+# The real dm+d, gzipped by scripts/build_slim_dmd.py. Without it the entrypoint falls
+# back to the 3-row sample and every barcode scan 404s.
+COPY data/dmd.slim.sqlite.gz ./data/dmd.slim.sqlite.gz
 
 RUN pip install --no-cache-dir -e .
 

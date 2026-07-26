@@ -46,6 +46,8 @@ Update `.env`:
 
 Set `MEDDATA_API_KEY`, `OPENFDA_API_KEY`, optional `APP_DATABASE_URL`, and `PUBLIC_BASE_URL` to your service URL. Or run `RENDER_API_KEY=… RENDER_OWNER_ID=… python backend/scripts/render_bootstrap.py` locally.
 
+**dm+d must be in the image.** `TRUD_*` is deliberately not set on Render (a full sync exceeds the free tier's 512 Mi), so the deploy uses the packed database committed at `backend/data/dmd.slim.sqlite.gz`. Rebuild it with `python backend/scripts/build_slim_dmd.py` after every ingest and commit the result — otherwise Render boots on the 3-row sample and every scan fails with "Database loading / Try again in a moment". Confirm after deploy: `/health` should report `"dmd_ready": true` and a six-figure `dmd_gtin_count`, not `3`.
+
 ### Render free tier: cold starts and keep-warm
 
 On Render **free** web services, the instance **sleeps after ~15 minutes** without traffic. The next request (e.g. [pocketary.vercel.app/interactions](https://pocketary.vercel.app/interactions) calling `POST /interactions/check`) can take **30–60+ seconds** while the service wakes.

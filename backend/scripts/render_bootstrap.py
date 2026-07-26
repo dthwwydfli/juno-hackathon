@@ -90,7 +90,18 @@ def env_var_payload(dot: dict[str, str]) -> list[dict]:
     for k in RENDER_KEYS:
         if k == "APP_DATABASE_URL":
             url = dot.get(k, "").strip()
-            if not url or "127.0.0.1" in url or "localhost" in url:
+            # A local Supabase URL is unreachable from Render, so it is skipped — but skip
+            # it silently and the service quietly runs on the container's ephemeral
+            # app.sqlite, losing every saved cabinet on restart with nothing to show why.
+            if "127.0.0.1" in url or "localhost" in url:
+                print(
+                    f"WARNING: {k} in backend/.env points at a local database; not syncing it. "
+                    "Render will fall back to ephemeral SQLite (/health reports "
+                    '"app_db_backend":"sqlite"). Set the hosted Supabase pooler URL to persist data.',
+                    file=sys.stderr,
+                )
+                continue
+            if not url:
                 continue
             env.append({"key": k, "value": url})
             continue
@@ -104,6 +115,13 @@ def remove_render_env(service_id: str, key: str) -> None:
         api("DELETE", f"/services/{service_id}/env-vars/{key}")
     except SystemExit:
         pass
+
+
+def app_database_url_synced(dot: dict[str, str]) -> bool:
+    url = dot.get("APP_DATABASE_URL", "").strip()
+    if not url or "127.0.0.1" in url or "localhost" in url:
+        return False
+    return True
 
 
 def sync_env_vars(service_id: str, dot: dict[str, str], public_url: str) -> None:
@@ -137,7 +155,8 @@ def main() -> None:
             print(json.dumps(detail, indent=2))
             sys.exit(1)
         sync_env_vars(service_id, dot, url)
-        remove_render_env(service_id, "APP_DATABASE_URL")
+        if not app_database_url_synced(dot):
+            remove_render_env(service_id, "APP_DATABASE_URL")
         remove_render_env(service_id, "TRUD_API_KEY")
         remove_render_env(service_id, "TRUD_DMD_ITEM_ID")
         trigger_deploy(service_id)

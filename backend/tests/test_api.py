@@ -50,6 +50,30 @@ def test_lookup_gtin():
     assert body["display_name"]
 
 
+def test_lookup_gtin_padding_is_equivalent():
+    """A pack's DataMatrix reports GTIN-14; its EAN-13 reports the same code unpadded."""
+    import sqlite3
+    from pathlib import Path
+
+    db = Path(__file__).resolve().parent.parent / "data" / "dmd.sqlite"
+    conn = sqlite3.connect(db)
+    row = conn.execute(
+        "SELECT gtin FROM gtin_lookup WHERE length(gtin) = 13 LIMIT 1"
+    ).fetchone()
+    conn.close()
+    assert row, "dm+d database has no 13-digit GTIN rows for padding test"
+    stored = row[0]
+    for code in (stored, stored.zfill(14), stored.lstrip("0")):
+        r = client.get("/lookup/barcode", params={"code": code})
+        assert r.status_code == 200, f"{code} did not resolve"
+        assert r.json()["gtin"] == stored
+
+
+def test_lookup_gtin_unknown_code_is_404():
+    r = client.get("/lookup/barcode", params={"code": "9999999999999"})
+    assert r.status_code == 404
+
+
 def test_medication_crud():
     r = client.post(
         "/medications",

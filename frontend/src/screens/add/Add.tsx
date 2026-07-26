@@ -28,6 +28,8 @@ type CameraFacing = 'environment' | 'user';
 type ApiScanStatus = 'checking' | 'ok' | 'error';
 
 const SCAN_HINT = 'Point at the pack barcode — anywhere on screen is fine.';
+/** After a failed lookup, ignore repeat decodes of the same GTIN while the pack stays in frame. */
+const LOOKUP_FAIL_COOLDOWN_MS = 2_500;
 
 /** The formats UK medicine packs actually carry. EAN/UPC covers retail packs; FMD packs
  *  print a 2D GS1 DataMatrix, and dispensing packs often carry GS1-128 or ITF-14 instead
@@ -177,6 +179,7 @@ export function Add() {
   const [multiCamera, setMultiCamera] = useState(false);
   const [torchOn, setTorchOn] = useState(false);
   const scanLock = useRef(false);
+  const lookupFailCooldownRef = useRef<{ code: string; until: number } | null>(null);
   const dmdReadyRef = useRef(true);
   const modeRef = useRef(mode);
   modeRef.current = mode;
@@ -197,13 +200,17 @@ export function Add() {
   }, []);
 
   const applyLookup = useCallback(async (raw: string) => {
+    // A DataMatrix hands back a full GS1 element string; show and store the GTIN from it.
+    const code = gtinFromScan(raw);
+    if (modeRef.current === 'scan') {
+      const cd = lookupFailCooldownRef.current;
+      if (cd && cd.code === code && Date.now() < cd.until) return;
+    }
     if (scanLock.current) return;
     scanLock.current = true;
     // Deliberately no reader.reset() here: reset() nulls video.srcObject, which killed the
     // preview and left the scanner dead after the first code that missed dm+d. scanLock
     // alone suppresses repeat hits while the lookup is in flight.
-    // A DataMatrix hands back a full GS1 element string; show and store the GTIN from it.
-    const code = gtinFromScan(raw);
     const fromScan = modeRef.current === 'scan';
     // Clear any error from an earlier misread, otherwise a stale "not in dm+d"
     // message sits under the success banner once a good scan lands.
@@ -211,9 +218,9 @@ export function Add() {
     setScanLine1('Looking up…');
     setScanLine2(code);
     setScanLine3('NHS dm+d database');
-    let resumeScan = false;
     try {
       const fields = await lookupBarcode(code);
+      lookupFailCooldownRef.current = null;
       setName(fields.name);
       setBrand(fields.brand);
       setForm(fields.form);
@@ -235,7 +242,12 @@ export function Add() {
       setScanned(true);
       setMode('filled');
     } catch (e) {
-      resumeScan = fromScan;
+      if (fromScan) {
+        lookupFailCooldownRef.current = {
+          code,
+          until: Date.now() + LOOKUP_FAIL_COOLDOWN_MS,
+        };
+      }
       if (e instanceof ApiError && e.status === 404 && !dmdReadyRef.current) {
         setScanLine1('Database loading');
         setScanLine2('Try again in a moment');
@@ -256,13 +268,6 @@ export function Add() {
       }
     } finally {
       scanLock.current = false;
-      // The decode loop was never stopped, so resuming is purely a matter of putting the
-      // status lines back — releasing scanLock above is what lets the next hit through.
-      if (resumeScan && modeRef.current === 'scan') {
-        setScanLine1('Scanning…');
-        setScanLine2(apiHostLabel());
-        setScanLine3(SCAN_HINT);
-      }
     }
   }, []);
   applyLookupRef.current = applyLookup;
@@ -307,6 +312,7 @@ export function Add() {
     setLookupErr('');
     setApiScanStatus('checking');
     scanLock.current = false;
+    lookupFailCooldownRef.current = null;
     setTorchOn(false);
     void apiFetch<{ dmd_ready?: boolean }>('/health', { timeoutMs: 8_000 })
       .then((h) => {
