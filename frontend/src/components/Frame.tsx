@@ -106,7 +106,7 @@ export function GpNote({ children }: { children?: ReactNode }) {
   return (
     <div className="gp-note">
       <Icon name="info" size={16} />
-      <span>{children ?? 'Information only — not medical advice. Please discuss with your GP.'}</span>
+      <span>{children ?? 'Information only. Not medical advice. Please discuss with your GP.'}</span>
     </div>
   );
 }

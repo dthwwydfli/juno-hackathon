@@ -134,7 +134,7 @@ export function Onboarding() {
 
               <div className="ob-hint">
                 <Icon name="info" size={14} strokeWidth={2} />
-                Add what you take now, or connect your NHS record — you can do this any time.
+                Add what you take now, or connect your NHS record. You can do this any time.
               </div>
             </div>
           </div>

@@ -49,7 +49,9 @@
 
 .rm-sec { display: flex; flex-direction: column; gap: 9px; }
 .rm-sh { font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--faint); padding: 0 2px; }
-.rm-para { font-size: 14.5px; line-height: 1.55; color: var(--text); }
+/* pre-line keeps the source/section breaks the backend puts in `full_text`;
+   without it every section ran together into one paragraph. */
+.rm-para { font-size: 14.5px; line-height: 1.55; color: var(--text); white-space: pre-line; }
 
 .rm-affects { display: flex; flex-wrap: wrap; gap: 9px; }
 .rm-affect {

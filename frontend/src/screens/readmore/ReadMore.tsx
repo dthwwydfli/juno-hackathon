@@ -166,7 +166,7 @@ export function ReadMore() {
         <span className="gi"><Stethoscope /></span>
         <div className="gt">
           Please discuss with your GP
-          <small>Information only — this isn’t medical advice or a diagnosis.</small>
+          <small>Information only. This isn’t medical advice or a diagnosis.</small>
         </div>
       </div>
     </PhoneFrame>

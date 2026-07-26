@@ -81,7 +81,7 @@ export function Warning({
           <button className="btn warn-ghost" onClick={onAddAnyway}>Add to my list anyway</button>
         </div>
 
-        <GpNote>Information only — not medical advice · {interaction.source}</GpNote>
+        <GpNote>Information only. Not medical advice · {interaction.source}</GpNote>
       </div>
     </Modal>
   );

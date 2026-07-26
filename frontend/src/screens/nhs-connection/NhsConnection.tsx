@@ -74,7 +74,7 @@ export function NhsConnection() {
             </button>
             <div className="synchint">
               <Icon name="info" size={14} strokeWidth={2} />
-              Just been to your GP? Records sync automatically each morning — tap Sync now to pull the latest straight away.
+              Just been to your GP? Records sync automatically each morning. Tap Sync now to pull the latest straight away.
             </div>
           </div>
 

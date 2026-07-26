@@ -39,7 +39,7 @@ export function MedCard({ med, flagged, onEdit, onWarning, onClick, trailing = '
           <button
             type="button"
             className="warn-badge act-btn"
-            aria-label="Possible interaction — view details"
+            aria-label="Possible interaction, view details"
             onClick={(e) => { e.stopPropagation(); onWarning(); }}
           >
             <Icon name="warning" size={17} strokeWidth={1.9} />

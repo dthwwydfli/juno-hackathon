@@ -6,7 +6,7 @@ import { Icon, iconForRoute } from '../../components/Icon';
 import { SelectField, ChipGroup } from '../../components/form/Form';
 import { TextField } from '../../components/form/Form';
 import { useStore } from '../../data/store';
-import { interactionsForLive } from '../../lib/interactions-live';
+import { interactionsForAsync } from '../../lib/interactions';
 import { getInteractionById } from '../../lib/interactions';
 import { ApiError, apiFetch } from '../../lib/api';
 import { lookupBarcode } from '../../lib/dmd-map';
@@ -137,6 +137,9 @@ export function Add() {
   const applyLookup = useCallback(async (code: string) => {
     if (scanLock.current) return;
     scanLock.current = true;
+    // Clear any error from an earlier misread, otherwise a stale "not in dm+d"
+    // message sits under the success banner once a good scan lands.
+    setLookupErr('');
     setScanLine1('Looking up…');
     setScanLine2(code);
     setScanLine3('NHS dm+d database');
@@ -159,6 +162,7 @@ export function Add() {
       setScanLine1('Match found');
       setScanLine2(`${fields.name}${fields.dose ? ` ${fields.dose}` : ''}`);
       setScanLine3(`${fields.brand || 'dm+d'} · NHS database`);
+      setLookupErr('');
       setScanned(true);
       setMode('filled');
     } catch (e) {
@@ -171,7 +175,7 @@ export function Add() {
             "NHS dm+d database isn't loaded yet. Wait for sync or check backend logs.",
           );
         } else if (e.status === 404) {
-          setLookupErr('Barcode not in NHS dm+d — try manual entry.');
+          setLookupErr('Barcode not in NHS dm+d. Try manual entry.');
         } else {
           setLookupErr("Can't reach medication lookup service.");
         }
@@ -196,6 +200,7 @@ export function Add() {
     setScanLine1('Scanning…');
     setScanLine2('');
     setScanLine3('Align the barcode within the frame');
+    setLookupErr('');
     scanLock.current = false;
     void apiFetch<{ dmd_ready?: boolean }>('/health')
       .then((h) => {
@@ -292,7 +297,7 @@ export function Add() {
       nav('/home');
       return;
     }
-    const found = await interactionsForLive(med, state.medications);
+    const found = await interactionsForAsync(med, state.medications);
     if (found.length) {
       const interaction = found[0];
       const otherName = interaction.a.toLowerCase() === med.name.toLowerCase() ? interaction.b : interaction.a;
@@ -353,7 +358,7 @@ export function Add() {
             <div className="dot"><Icon name="capsule" size={24} strokeWidth={1.7} /></div>
             <div className="mtext">
               <div className="mt1">{scanLine1}</div>
-              <div className="mt2">{scanLine2 || '—'}</div>
+              <div className="mt2">{scanLine2 || ''}</div>
               <div className="mt3">{scanLine3}</div>
             </div>
             <svg className="add-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round"><path d="M12 3a9 9 0 1 0 9 9" opacity=".9" /></svg>
@@ -422,7 +427,7 @@ export function Add() {
             {mode === 'filled' && (
               <div className="add-filled-banner">
                 <Icon name="check" size={18} strokeWidth={2} />
-                Filled automatically from barcode scan — check &amp; confirm.
+                Filled automatically from barcode scan. Check and confirm.
               </div>
             )}
 
@@ -511,7 +516,7 @@ export function Add() {
                 <SelectField options={DURATIONS} value={duration} onChange={setDuration} />
                 <span className="field-hint">
                   <Icon name="info" size={13} strokeWidth={2} />
-                  Comes from your NHS record. Courses with an end date archive themselves automatically — nothing for you to do.
+                  Comes from your NHS record. Courses with an end date archive themselves automatically, so there is nothing for you to do.
                 </span>
               </div>
             )}

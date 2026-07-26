@@ -31,7 +31,7 @@ export function Auth() {
           <Brand />
           <div className="si-body">
             <h1>Sign in to continue</h1>
-            <div className="si-sub">Your medicines, interactions and GP summary — all in one place.</div>
+            <div className="si-sub">Your medicines, interactions and GP summary, all in one place.</div>
 
             <div className="authbtns">
               <button className="authbtn apple" onClick={() => setStep('faceid')}>
