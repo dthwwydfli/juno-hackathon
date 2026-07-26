@@ -1,70 +1,72 @@
 import { useNavigate } from 'react-router-dom';
-import { Icon } from '../../components/Icon';
+import { LandingIcon } from './LandingIcon';
+import { LandingLogo } from './LandingLogo';
+import { LandingStory } from './LandingStory';
 import './landing.css';
 
 export function Landing() {
   const nav = useNavigate();
+
+  const openApp = () => nav('/auth');
+
+  const introActions = (
+    <>
+      <div className="landing-cta-row">
+        <button type="button" className="landing-cta primary" onClick={openApp}>
+          Open App
+          <LandingIcon name="chevron" size={19} strokeWidth={2} />
+        </button>
+        <button type="button" className="landing-cta ghost" onClick={() => nav('/onboarding')}>
+          Create your profile
+        </button>
+      </div>
+      <div className="landing-trust">
+        <LandingIcon name="lock" size={15} strokeWidth={1.65} />
+        Free to use. Connects securely with your NHS login.
+      </div>
+    </>
+  );
+
   return (
     <div className="landing">
       <header className="landing-head">
         <div className="landing-logo">
-          <span className="landing-mark"><Icon name="capsule" size={22} strokeWidth={1.9} /></span>
+          <LandingLogo size={38} />
           Pharmacy in Your Pocket
         </div>
-        <nav className="landing-nav">
-          <a href="#features">Features</a>
+        <nav className="landing-nav" aria-label="Marketing">
+          <a href="#story">Story</a>
           <a href="#privacy">Privacy</a>
-          <button className="landing-openapp" onClick={() => nav('/auth')}>
+          <button type="button" className="landing-openapp" onClick={openApp}>
             Open App
-            <Icon name="chevron" size={16} strokeWidth={2.1} />
+            <LandingIcon name="chevron" size={16} strokeWidth={2} />
           </button>
         </nav>
       </header>
 
-      <main className="landing-main">
-        <section className="landing-hero">
-          <span className="landing-eyebrow">
-            <Icon name="shield" size={14} strokeWidth={2.2} />
-            NHS-connected medication tracker
-          </span>
-          <h1>Every medication you take, in one pocket.</h1>
-          <p>
-            Bring your NHS, private and over-the-counter medicines together, get a
-            heads-up on potential interactions, and share a clear summary with your GP.
-          </p>
-          <div className="landing-cta-row">
-            <button className="landing-cta primary" onClick={() => nav('/auth')}>
-              Open App
-              <Icon name="chevron" size={19} strokeWidth={2.1} />
-            </button>
-            <button className="landing-cta ghost" onClick={() => nav('/onboarding')}>
-              Create your profile
-            </button>
-          </div>
-          <div className="landing-trust">
-            <Icon name="lock" size={15} strokeWidth={2} />
-            Free to use · Connects securely with your NHS login
-          </div>
-        </section>
+      <main className="landing-main landing-main-story">
+        <LandingStory introActions={introActions} />
 
-        <section className="landing-features" id="features">
-          <div className="landing-feat">
-            <span className="fi"><Icon name="shield" size={22} strokeWidth={1.8} /></span>
-            <h3>Connect your NHS record</h3>
-            <p>Pull in prescriptions automatically, then add private and OTC medicines yourself.</p>
-          </div>
-          <div className="landing-feat">
-            <span className="fi"><Icon name="warning" size={22} strokeWidth={1.8} /></span>
-            <h3>Spot potential interactions</h3>
-            <p>See when two medicines may not mix well, explained in plain English.</p>
-          </div>
-          <div className="landing-feat">
-            <span className="fi"><Icon name="qr" size={22} strokeWidth={1.8} /></span>
-            <h3>Share with your GP</h3>
-            <p>Generate a QR code that opens a ready-made summary of your medicines.</p>
-          </div>
+        <section className="landing-cta-band" aria-label="Get started">
+          <h2 className="landing-cta-band-title">Ready to open your cabinet?</h2>
+          <button type="button" className="landing-cta-link" onClick={openApp}>
+            Open app
+            <LandingIcon name="external" size={20} strokeWidth={1.65} />
+          </button>
         </section>
       </main>
+
+      <footer className="landing-foot">
+        <div className="landing-foot-brand">
+          <LandingLogo size={32} />
+          Pharmacy in Your Pocket
+        </div>
+        <nav className="landing-foot-nav" aria-label="Footer">
+          <a href="#story">Story</a>
+          <a href="#privacy">Privacy</a>
+        </nav>
+        <p className="landing-foot-note">Hackathon prototype. Not a licensed medical device.</p>
+      </footer>
     </div>
   );
 }
