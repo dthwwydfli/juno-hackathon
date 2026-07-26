@@ -1,4 +1,4 @@
-# DESIGN.md — Pharmacy in Your Pocket
+# DESIGN.md — Pocketary
 
 Marketing landing and in-app UI share one token system ([`frontend/src/styles/tokens.css`](frontend/src/styles/tokens.css)). This document describes **look, feel, and landing patterns** for AI agents and contributors. It follows the [DESIGN.md / Stitch](https://github.com/voltagent/awesome-design-md) shape.
 

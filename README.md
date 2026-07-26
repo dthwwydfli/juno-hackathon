@@ -12,6 +12,8 @@ Open the app at **http://localhost:5173** (API defaults to **http://localhost:80
 
 Phone / LAN testing for QR scans is optional later — see comments in `frontend/.env.example`.
 
+**Vercel + phone barcode scanning:** [docs/deploy-vercel-phone-scan.md](docs/deploy-vercel-phone-scan.md)
+
 Add `MEDDATA_API_KEY` in backend `.env` for faster interaction checks (see [backend/README.md](backend/README.md)).
 
 ### Verify API wiring
