@@ -11,7 +11,7 @@ services:
     healthCheckPath: /health
     envVars:
       - key: SEED_DEMO_ON_START
-        value: "1"
+        value: "0"
       - key: CORS_ORIGINS
         value: https://pocketary.vercel.app,http://localhost:5173
       - key: DMD_DB_PATH

@@ -187,3 +187,25 @@ def test_pick_evidence_sentences_skips_retracted():
     picked = pick_evidence_sentences(interaction, limit=2)
     assert len(picked) == 1
     assert picked[0]["sentence"] == "Good evidence."
+
+
+def test_merge_pending_includes_unsaved_med_in_check_set():
+    from app.db.models import MedCategory, Medication
+    from app.services.interactions import PendingMedCheck, _merge_pending_meds
+
+    db_meds = [
+        Medication(
+            id=1,
+            user_id="u",
+            display_name="Warfarin 3mg tablets",
+            category=MedCategory.nhs_prescription,
+            dosage="3mg",
+            schedule="{}",
+        )
+    ]
+    merged = _merge_pending_meds(
+        db_meds, [PendingMedCheck(display_name="Clopidogrel 75", category=MedCategory.otc)]
+    )
+    assert len(merged) == 2
+    assert any(m.display_name == "Clopidogrel 75" for m in merged)
+    assert merged[1].id < 0

@@ -4,6 +4,9 @@ import { syncCabinetToBackend } from './sync-cabinet';
 
 export interface LiveCheckOptions {
   onProgress?: (found: Interaction[]) => void;
+  /** Bypass 30s sync dedupe (add-flow save). */
+  forceSync?: boolean;
+  pendingMeds?: { display_name: string; category: string }[];
 }
 
 /** Per-provider outcome, so an outage never renders as "no interactions found". */
@@ -168,13 +171,19 @@ export async function checkInteractionsLive(
   }
 
   await checkApiHealth();
-  await syncCabinetToBackend(allMeds.filter((m) => m.status === 'active' || m.status === 'archived'));
+  await syncCabinetToBackend(
+    allMeds.filter((m) => m.status === 'active' || m.status === 'archived'),
+    { force: opts?.forceSync },
+  );
 
   const res = await apiFetch<{ warnings: BackendWarning[]; sources_status?: SourcesStatus }>(
     '/interactions/check',
     {
       method: 'POST',
-      body: JSON.stringify({ meddata_only: false }),
+      body: JSON.stringify({
+        meddata_only: false,
+        pending_meds: opts?.pendingMeds ?? [],
+      }),
       timeoutMs: 90_000,
     },
   );

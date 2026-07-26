@@ -11,7 +11,8 @@ import { Icon, iconForRoute } from '../../components/Icon';
 import { SelectField, ChipGroup } from '../../components/form/Form';
 import { TextField } from '../../components/form/Form';
 import { useStore } from '../../data/store';
-import { interactionsForAsync, InteractionCheckIncompleteError } from '../../lib/interactions';
+import { interactionsForAsync, InteractionCheckIncompleteError, markInteractionCheckFresh } from '../../lib/interactions';
+import { cabinetWithPending } from '../../lib/sync-cabinet';
 import { getInteractionById } from '../../lib/interactions';
 import { ApiError, apiBaseUrl, apiFetch, formatApiReachabilityError } from '../../lib/api';
 import { gtinFromScan, lookupBarcode } from '../../lib/dmd-map';
@@ -794,6 +795,8 @@ export function Add() {
           onConfirm={() => {
             if (clearCheck.isEdit) store.updateMedication(clearCheck.med);
             else store.addMedication(clearCheck.med);
+            const cabinet = cabinetWithPending(state.medications, clearCheck.med);
+            markInteractionCheckFresh(cabinet.filter((m) => m.status === 'active'));
             setClearCheck(null);
             nav('/home');
           }}
