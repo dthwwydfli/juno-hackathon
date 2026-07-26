@@ -51,6 +51,21 @@ function medByName(meds: Medication[], name: string): Medication | undefined {
   return meds.find((m) => norm(m.name) === n || norm(m.dmdDisplayName || '') === n);
 }
 
+function resolveMedFromDisplay(active: Medication[], displayName: string): Medication | undefined {
+  const direct = medByName(active, displayName);
+  if (direct) return direct;
+  const dn = norm(displayName);
+  return active.find((m) => {
+    const name = norm(m.name);
+    if (dn === name || dn.startsWith(`${name} `) || dn.includes(name)) return true;
+    const pack = norm(m.dmdDisplayName || '');
+    if (pack && (dn === pack || dn.includes(pack) || pack.includes(name))) return true;
+    const label = norm(`${m.name} ${m.dose}`);
+    if (label && (dn === label || dn.startsWith(label) || label.startsWith(dn))) return true;
+    return false;
+  });
+}
+
 function firstToken(displayName: string): string {
   return displayName.split(/\s+/)[0] || displayName;
 }
@@ -114,9 +129,11 @@ async function mapWarningsToInteractions(
     const nameA = firstToken(w.med_a.display_name);
     const nameB = firstToken(w.med_b.display_name);
     const medA =
+      resolveMedFromDisplay(active, w.med_a.display_name) ||
       medByName(active, nameA) ||
       active.find((m) => w.med_a.display_name.toLowerCase().includes(m.name.toLowerCase()));
     const medB =
+      resolveMedFromDisplay(active, w.med_b.display_name) ||
       medByName(active, nameB) ||
       active.find((m) => w.med_b.display_name.toLowerCase().includes(m.name.toLowerCase()));
     if (!medA || !medB) continue;

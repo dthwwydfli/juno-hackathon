@@ -6,9 +6,11 @@ import {
   getLastInteractionError,
   getLiveRefreshState,
   getSourcesStatus,
+  getStaleInteractionReason,
   setInteractionCache,
   setLiveRefreshState,
   setSourcesStatus,
+  setStaleInteractionReason,
 } from './interaction-cache';
 import { formatApiReachabilityError } from './api';
 import {
@@ -30,6 +32,17 @@ function medsCacheKey(meds: Medication[]): string {
 let inflight: Promise<Interaction[]> | null = null;
 let inflightKey = '';
 
+/** Thrown when a pre-save check cannot trust an empty result (MedData down, etc.). */
+export class InteractionCheckIncompleteError extends Error {
+  readonly reason: string;
+
+  constructor(reason: string) {
+    super(reason);
+    this.name = 'InteractionCheckIncompleteError';
+    this.reason = reason;
+  }
+}
+
 /** Sync read from last successful backend refresh. No demo fixture fallback. */
 export function checkInteractions(meds: Medication[]): Interaction[] {
   const state = getLiveRefreshState();
@@ -47,6 +60,8 @@ export function getInteractionSources(): SourcesStatus {
   return getSourcesStatus();
 }
 
+export { getStaleInteractionReason };
+
 /**
  * Reason an empty result is not trustworthy, or null when every source answered.
  * Guards against a dead API rendering as a clean "no interactions found".
@@ -55,11 +70,47 @@ export function getIncompleteCheckReason(): string | null {
   return describeSourceProblem(getSourcesStatus());
 }
 
-export interface RefreshInteractionsOptions extends Pick<LiveCheckOptions, 'onProgress'> {}
+export interface RefreshInteractionsOptions extends Pick<LiveCheckOptions, 'onProgress'> {
+  force?: boolean;
+  /** When false, never reuse a previous cache on failure (used before saving a new med). */
+  allowStaleCache?: boolean;
+}
+
+function applyRefreshResult(
+  key: string,
+  list: Interaction[],
+  sources: SourcesStatus,
+  opts?: RefreshInteractionsOptions,
+): Interaction[] {
+  const problem = describeSourceProblem(sources);
+  const allowStale = opts?.allowStaleCache !== false;
+
+  if (problem && list.length === 0) {
+    const prev = getCachedInteractions();
+    if (allowStale && prev.length > 0) {
+      setStaleInteractionReason(problem);
+      setInteractionCache(prev, key);
+      setSourcesStatus(sources);
+      setLiveRefreshState('ready', null);
+      return prev;
+    }
+    setStaleInteractionReason(null);
+    setInteractionCache([], key);
+    setSourcesStatus(sources);
+    setLiveRefreshState('ready', null);
+    return [];
+  }
+
+  setStaleInteractionReason(null);
+  setInteractionCache(list, key);
+  setSourcesStatus(sources);
+  setLiveRefreshState('ready', null);
+  return list;
+}
 
 export async function refreshInteractions(
   meds: Medication[],
-  opts?: RefreshInteractionsOptions & { force?: boolean },
+  opts?: RefreshInteractionsOptions,
 ): Promise<Interaction[]> {
   const key = medsCacheKey(meds);
   if (inflight && inflightKey === key) return inflight;
@@ -74,14 +125,16 @@ export async function refreshInteractions(
   setLiveRefreshState('loading', null);
 
   inflight = checkInteractionsLive(meds, { onProgress: opts?.onProgress })
-    .then((result) => {
-      setInteractionCache(result.interactions, key);
-      setSourcesStatus(result.sources);
-      setLiveRefreshState('ready', null);
-      return result.interactions;
-    })
+    .then((result) => applyRefreshResult(key, result.interactions, result.sources, opts))
     .catch((e) => {
       const msg = formatApiReachabilityError(e);
+      const prev = getCachedInteractions();
+      const allowStale = opts?.allowStaleCache !== false;
+      if (allowStale && prev.length > 0) {
+        setStaleInteractionReason(msg);
+        setLiveRefreshState('ready', null);
+        return prev;
+      }
       setLiveRefreshState('error', msg);
       throw e;
     })
@@ -95,15 +148,34 @@ export async function refreshInteractions(
   return inflight;
 }
 
+function interactionInvolvesMed(med: Medication, rule: { a: string; b: string }): boolean {
+  const names = new Set<string>();
+  const add = (s: string) => {
+    const n = norm(s);
+    if (n) names.add(n);
+  };
+  add(med.name);
+  if (med.dmdDisplayName) add(med.dmdDisplayName);
+  add(`${med.name} ${med.dose}`.trim());
+  const a = norm(rule.a);
+  const b = norm(rule.b);
+  for (const n of names) {
+    if (a === n || b === n) return true;
+    if (a.includes(n) || b.includes(n) || n.includes(a) || n.includes(b)) return true;
+  }
+  return false;
+}
+
 export async function interactionsForAsync(med: Medication, existing: Medication[]): Promise<Interaction[]> {
   const others = existing.filter((m) => m.id !== med.id && m.status === 'active');
   if (!others.length) return [];
   const merged = [...others, { ...med, status: 'active' as const }];
-  const name = norm(med.name);
-  // Route through refreshInteractions so the result is cached and the screens
-  // that mount afterwards reuse it instead of re-checking the same cabinet.
-  const list = await refreshInteractions(merged);
-  return list.filter((i) => norm(i.a) === name || norm(i.b) === name);
+  const list = await refreshInteractions(merged, { force: true, allowStaleCache: false });
+  const problem = getIncompleteCheckReason();
+  if (problem) {
+    throw new InteractionCheckIncompleteError(problem);
+  }
+  return list.filter((i) => interactionInvolvesMed(med, i));
 }
 
 /** @deprecated sync — use interactionsForAsync */

@@ -6,6 +6,15 @@ let cachedKey = '';
 let refreshState: LiveRefreshState = 'idle';
 let lastError: string | null = null;
 let lastSources: SourcesStatus = {};
+let staleReason: string | null = null;
+
+export function getStaleInteractionReason(): string | null {
+  return staleReason;
+}
+
+export function setStaleInteractionReason(reason: string | null): void {
+  staleReason = reason;
+}
 
 export function setInteractionCache(list: Interaction[], key = ''): void {
   cached = list;
