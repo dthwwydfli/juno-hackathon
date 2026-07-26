@@ -1,7 +1,5 @@
 # juno-hackathon
 
-Medication safety hackathon project — see [plan.md](plan.md), **[first.md](first.md)** (frontend wiring), [docs/mobbin-inspirations.md](docs/mobbin-inspirations.md) (UI references), [docs/hosting-and-data.md](docs/hosting-and-data.md) (Supabase Postgres + FastAPI; optional SQLite locally), [supabase/README.md](supabase/README.md) (migrations + demo seed), and [backend/README.md](backend/README.md).
-
 ## Frontend
 
 ```bash
