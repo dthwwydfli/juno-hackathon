@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { PhoneFrame, StatusBar, SubHeader } from '../../components/Frame';
 import { Icon, iconForRoute } from '../../components/Icon';
+import { PdfCanvas } from '../../components/PdfCanvas';
 import { useStore } from '../../data/store';
 import { refreshInteractions, checkInteractions } from '../../lib/interactions';
 import { qrDataUrl } from '../../lib/qr';
@@ -12,12 +13,19 @@ import {
   gpPdfUrlForToken,
   prepareGpShare,
 } from '../../lib/sync-cabinet';
-import type { Category } from '../../data/types';
+import type { Category, Medication } from '../../data/types';
 import './share.css';
 
 type View = 'qr' | 'doc' | 'pdf';
 
 const catClass: Record<Category, string> = { NHS: 'nhs', Private: 'priv', OTC: 'otc' };
+
+/** Same reading order as the PDF: NHS prescriptions, then OTC, then private. */
+const catOrder: Record<Category, number> = { NHS: 0, OTC: 1, Private: 2 };
+
+function byCategory(meds: Medication[]): Medication[] {
+  return [...meds].sort((a, b) => catOrder[a.category] - catOrder[b.category]);
+}
 
 function formatExpiryLabel(iso: string): string {
   const end = new Date(iso).getTime();
@@ -34,8 +42,14 @@ export function Share() {
   const initial = (params.get('v') as View) || 'doc';
   const [view, setView] = useState<View>(['qr', 'doc', 'pdf'].includes(initial) ? initial : 'doc');
 
-  const active = useMemo(() => state.medications.filter((m) => m.status === 'active'), [state.medications]);
-  const archived = useMemo(() => state.medications.filter((m) => m.status === 'archived'), [state.medications]);
+  const active = useMemo(
+    () => byCategory(state.medications.filter((m) => m.status === 'active')),
+    [state.medications],
+  );
+  const archived = useMemo(
+    () => byCategory(state.medications.filter((m) => m.status === 'archived')),
+    [state.medications],
+  );
   const syncKey = useMemo(() => cabinetSyncKey(state.medications), [state.medications]);
 
   const [qrUrl, setQrUrl] = useState<string>('');
@@ -47,15 +61,21 @@ export function Share() {
   const [expiryLabel, setExpiryLabel] = useState<string>('');
   const [linkFeedback, setLinkFeedback] = useState<string>('');
   const [ixTick, setIxTick] = useState(0);
+  const [pdfPages, setPdfPages] = useState(1);
+  const [pdfPage, setPdfPage] = useState(1);
+  /** The share snapshot is frozen at token time, so wait for the check to finish. */
+  const [ixReady, setIxReady] = useState(false);
 
   const interactions = useMemo(() => checkInteractions(state.medications), [state.medications, ixTick]);
 
+  // Runs for every view: opening the PDF directly must not produce a summary
+  // with "POTENTIAL INTERACTIONS (0)" just because the check never started.
+  // refreshInteractions is cached by cabinet fingerprint, so this is free on repeat.
   useEffect(() => {
-    if (view === 'qr' || view === 'pdf') return;
-    void refreshInteractions(state.medications)
-      .then(() => setIxTick((t) => t + 1))
-      .catch(() => setIxTick((t) => t + 1));
-  }, [state.medications, view]);
+    setIxReady(false);
+    const done = () => { setIxTick((t) => t + 1); setIxReady(true); };
+    void refreshInteractions(state.medications).then(done).catch(done);
+  }, [state.medications]);
 
   useEffect(() => {
     if (view !== 'pdf') return;
@@ -70,7 +90,7 @@ export function Share() {
   }, [view, syncKey, ixTick, state.profile.name, state.lastSynced, state]);
 
   useEffect(() => {
-    if (view !== 'qr') return;
+    if (view !== 'qr' || !ixReady) return;
     let live = true;
     setShareErr('');
     setShareLoading(true);
@@ -100,10 +120,10 @@ export function Share() {
       }
     })();
     return () => { live = false; };
-  }, [view, syncKey, state.profile.name]);
+  }, [view, syncKey, state.profile.name, ixReady]);
 
   useEffect(() => {
-    if (view !== 'pdf') return;
+    if (view !== 'pdf' || !ixReady) return;
     let live = true;
     setGpLinkErr('');
     setShareLoading(true);
@@ -142,10 +162,7 @@ export function Share() {
       }
     })();
     return () => { live = false; };
-  }, [view, syncKey, state.profile.name]);
-
-  const archNames = archived.slice(0, 3).map((m) => m.name).join(', ');
-  const archExtra = archived.length - Math.min(3, archived.length);
+  }, [view, syncKey, state.profile.name, ixReady]);
 
   const savePdf = async () => {
     try {
@@ -170,6 +187,30 @@ export function Share() {
 
   const qrPlaceholder = shareLoading ? 'Generating QR…' : shareErr || '';
 
+  const onPdfPages = useCallback((total: number, current: number) => {
+    setPdfPages(total);
+    setPdfPage(current);
+  }, []);
+
+  /** Print the PDF itself; window.print() would print the app shell instead. */
+  const printPdf = () => {
+    if (!pdfPreviewUrl) return;
+    const frame = document.createElement('iframe');
+    frame.style.position = 'fixed';
+    frame.style.right = '0';
+    frame.style.bottom = '0';
+    frame.style.width = '0';
+    frame.style.height = '0';
+    frame.style.border = '0';
+    frame.src = pdfPreviewUrl;
+    frame.onload = () => {
+      frame.contentWindow?.focus();
+      frame.contentWindow?.print();
+      setTimeout(() => frame.remove(), 60_000);
+    };
+    document.body.appendChild(frame);
+  };
+
   if (view === 'pdf') {
     return (
       <PhoneFrame label="Medication summary PDF">
@@ -187,18 +228,18 @@ export function Share() {
           )}
           <div className="shr-pdf-frame-wrap">
             {pdfPreviewUrl ? (
-              <iframe src={`${pdfPreviewUrl}#toolbar=0&navpanes=0&view=FitH`} title="Medication summary PDF" />
+              <PdfCanvas url={pdfPreviewUrl} onPages={onPdfPages} />
             ) : (
               <div className="shr-qr-ph">Loading PDF…</div>
             )}
           </div>
           <div className="shr-pdf-bottom">
-            <span className="shr-pdf-page-ind">Page 1 of 1</span>
+            <span className="shr-pdf-page-ind">Page {pdfPage} of {pdfPages}</span>
             <button className="shr-pdf-share" onClick={() => void shareLink()} disabled={shareLoading}>
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.9} strokeLinecap="round" strokeLinejoin="round"><path d="M12 3v11" /><path d="M8.5 6.5L12 3l3.5 3.5" /><path d="M6 11v8a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1v-8" /></svg>
               Share
             </button>
-            <button className="shr-pdf-print" aria-label="Print" onClick={() => window.print()}>
+            <button className="shr-pdf-print" aria-label="Print" onClick={printPdf}>
               <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><path d="M6 9V3h12v6" /><rect x="4" y="9" width="16" height="8" rx="2" /><path d="M7 17h10v4H7z" /></svg>
             </button>
           </div>
@@ -223,7 +264,7 @@ export function Share() {
               )}
             </div>
             <div className="shr-qtitle">Show this to your GP</div>
-            <div className="shr-qsub">They scan it to open your medication summary — no app or login needed.</div>
+            <div className="shr-qsub">They scan it to open your medication summary. No app or login needed.</div>
             <div className="shr-qchips">
               <span className="shr-qchip"><b>{active.length}</b> meds</span>
               <span className="shr-qchip"><b>{interactions.length}</b> interactions</span>
@@ -289,22 +330,28 @@ export function Share() {
               {interactions.map((i) => (
                 <div className="shr-ix" key={i.id}>
                   <Icon name="warning" size={16} strokeWidth={2} />
-                  <span><b>{i.a} ⇄ {i.b}</b> — {i.reason}</span>
+                  <span><b>{i.a} ⇄ {i.b}</b>: {i.reason}</span>
                 </div>
               ))}
             </div>
 
             <div className="shr-sec">
               <div className="sh"><span>Archived</span><span className="tab">{archived.length} items</span></div>
-              <div className="shr-arch">
-                <Icon name="archive" size={16} />
-                <span><b>{archived.length} past medications</b> · {archNames}{archExtra > 0 ? ` +${archExtra}` : ''}</span>
-              </div>
+              {archived.map((m) => (
+                <div className="shr-med" key={m.id}>
+                  <span className="mi"><Icon name={iconForRoute(m.route)} size={17} /></span>
+                  <div>
+                    <div className="mn">{m.name} {m.dose}</div>
+                    <div className="md">{m.brand} · {m.scheduleLabel || m.times.join(', ')}</div>
+                  </div>
+                  <span className={`cat ${catClass[m.category]}`}>{m.category}</span>
+                </div>
+              ))}
             </div>
 
             <div className="shr-attrib">
               <Icon name="info" size={13} />
-              Information only — not medical advice. Source: NHS · BNF.
+              Information only. Not medical advice. Source: NHS · BNF.
             </div>
           </div>
 

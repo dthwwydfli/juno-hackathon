@@ -1,0 +1,34 @@
+/* PDF pages drawn to canvas so the paper fills the frame width with no
+   plugin chrome and no dark letterbox bars. Stays light in both themes,
+   matching the iOS Quick Look mock it sits inside. */
+
+.pdfc-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  background: #e7e6e2;
+  -webkit-overflow-scrolling: touch;
+}
+
+.pdfc-pages {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 0;
+}
+
+.pdfc-page {
+  display: block;
+  width: 100%;
+  height: auto;
+  background: #fff;
+}
+
+.pdfc-error {
+  padding: 14px;
+  font-size: 12.5px;
+  line-height: 1.4;
+  color: #6b4e1f;
+  background: #fff8e8;
+}

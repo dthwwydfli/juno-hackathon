@@ -74,9 +74,6 @@
 .shr-ix svg { flex: 0 0 auto; margin-top: 1px; color: var(--amber); }
 .shr-ix b { font-weight: 700; }
 
-.shr-arch { background: var(--surface); border: 1px dashed var(--hairline); border-radius: 13px; padding: 11px 13px; font-size: 13px; color: var(--muted); display: flex; align-items: center; gap: 9px; }
-.shr-arch b { color: var(--text); font-weight: 600; }
-
 .shr-attrib { display: flex; align-items: center; justify-content: center; gap: 6px; font-size: 11px; color: var(--faint); margin-top: 2px; }
 
 .shr-doc-foot { flex: 0 0 auto; display: flex; gap: 10px; padding: 12px 16px 26px; border-top: 1px solid var(--hairline); background: var(--app-bg); }
@@ -93,8 +90,7 @@
 .shr-pdf-top .fname { font-size: 13px; font-weight: 600; color: #6B6B63; }
 .shr-pdf-top .shr-glyph { color: #0B6E62; background: none; border: 0; cursor: pointer; padding: 0; display: flex; align-items: center; }
 .shr-pdf-notice { flex: 0 0 auto; padding: 8px 14px; font-size: 11px; line-height: 1.35; color: #6B4E1F; background: #FFF8E8; border-bottom: 1px solid #E4E3DE; }
-.shr-pdf-frame-wrap { flex: 1 1 auto; min-height: 0; background: #E7E6E2; }
-.shr-pdf-frame-wrap iframe { width: 100%; height: 100%; border: 0; display: block; }
+.shr-pdf-frame-wrap { flex: 1 1 auto; min-height: 0; background: #E7E6E2; display: flex; flex-direction: column; }
 .shr-pdf-bottom { flex: 0 0 auto; padding: 11px 22px 24px; background: #fff; border-top: 1px solid #E4E3DE; display: flex; align-items: center; justify-content: space-between; }
 .shr-pdf-page-ind { font-size: 12.5px; color: #6B6B63; font-weight: 500; }
 .shr-pdf-share { display: flex; align-items: center; gap: 8px; color: #0B6E62; font-size: 14.5px; font-weight: 700; background: none; border: 0; font-family: inherit; cursor: pointer; padding: 0; }

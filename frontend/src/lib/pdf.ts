@@ -52,6 +52,20 @@ const AMBER: [number, number, number] = [199, 121, 31];
 const INK: [number, number, number] = [26, 26, 23];
 const MUTED: [number, number, number] = [107, 107, 99];
 
+/** GP-facing reading order: NHS prescriptions first, then OTC, then private. */
+const CATEGORY_ORDER: Record<string, number> = { NHS: 0, OTC: 1, Private: 2 };
+
+function byCategory<T extends { category: string }>(meds: T[]): T[] {
+  return meds
+    .map((m, i) => ({ m, i }))
+    .sort(
+      (a, b) =>
+        (CATEGORY_ORDER[a.m.category] ?? 99) - (CATEGORY_ORDER[b.m.category] ?? 99) ||
+        a.i - b.i,
+    )
+    .map(({ m }) => m);
+}
+
 /** Build a real A4 medication-summary PDF from the live state. */
 export function buildSummaryPdf(state: AppState, interactions?: Interaction[]): jsPDF {
   const ix = interactions ?? checkInteractions(state.medications);
@@ -84,19 +98,25 @@ export function buildSummaryPdf(state: AppState, interactions?: Interaction[]): 
   y += 14;
   doc.text(`Generated ${state.lastSynced}`, M, y);
 
-  const active = state.medications.filter((m) => m.status === 'active');
-  y += 34;
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(11);
-  doc.setTextColor(...INK);
-  doc.text(`CURRENT MEDICATIONS  (${active.length})`, M, y);
-  y += 8;
-  doc.setDrawColor(236, 235, 230);
-  doc.line(M, y, W - M, y);
-  y += 20;
+  const ensureSpace = (needed: number) => {
+    if (y + needed > 800) { doc.addPage(); y = 56; }
+  };
 
-  for (const m of active) {
-    if (y > 760) { doc.addPage(); y = 56; }
+  const sectionHeading = (label: string, count: number) => {
+    ensureSpace(60);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(11);
+    doc.setTextColor(...INK);
+    doc.text(`${label} (${count})`, M, y);
+    y += 8;
+    doc.setDrawColor(236, 235, 230);
+    doc.line(M, y, W - M, y);
+    y += 20;
+  };
+
+  // Current and archived share this row so the two tables cannot drift apart.
+  const medRow = (m: (typeof state.medications)[number]) => {
+    ensureSpace(40);
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(11);
     doc.setTextColor(...INK);
@@ -106,22 +126,30 @@ export function buildSummaryPdf(state: AppState, interactions?: Interaction[]): 
     doc.text(m.category, W - M, y, { align: 'right' });
     y += 14;
     doc.setFontSize(9.5);
-    doc.text(`${m.brand} · ${m.scheduleLabel || m.times.join(', ')} · ${m.route}`, M, y);
+    const schedule = m.scheduleLabel || (m.times?.length ? m.times.join(', ') : '');
+    doc.text([m.brand, schedule, m.route].filter(Boolean).join(' · '), M, y);
     y += 22;
+  };
+
+  const active = byCategory(state.medications.filter((m) => m.status === 'active'));
+  const archived = byCategory(state.medications.filter((m) => m.status === 'archived'));
+
+  y += 34;
+  sectionHeading('CURRENT MEDICATIONS', active.length);
+  for (const m of active) medRow(m);
+
+  if (archived.length) {
+    y += 8;
+    sectionHeading('ARCHIVED', archived.length);
+    for (const m of archived) medRow(m);
   }
 
   const interactionsList = ix;
   y += 8;
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(11);
-  doc.setTextColor(...INK);
-  doc.text(`POTENTIAL INTERACTIONS  (${interactionsList.length})`, M, y);
-  y += 8;
-  doc.line(M, y, W - M, y);
-  y += 20;
+  sectionHeading('POTENTIAL INTERACTIONS', interactionsList.length);
 
   for (const i of interactionsList) {
-    if (y > 740) { doc.addPage(); y = 56; }
+    ensureSpace(56);
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(10.5);
     doc.setTextColor(...AMBER);
@@ -135,33 +163,13 @@ export function buildSummaryPdf(state: AppState, interactions?: Interaction[]): 
     y += lines.length * 12 + 12;
   }
 
-  const archived = state.medications.filter((m) => m.status === 'archived');
-  if (archived.length) {
-    if (y > 700) { doc.addPage(); y = 56; }
-    y += 8;
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(11);
-    doc.setTextColor(...INK);
-    doc.text(`ARCHIVED  (${archived.length})`, M, y);
-    y += 8;
-    doc.line(M, y, W - M, y);
-    y += 18;
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(9.5);
-    doc.setTextColor(...MUTED);
-    const names = archived.map((m) => `${m.name} ${m.dose}`).join(',  ');
-    const lines = doc.splitTextToSize(names, W - M * 2);
-    doc.text(lines, M, y);
-    y += lines.length * 12 + 8;
-  }
-
-  if (y > 720) { doc.addPage(); y = 56; }
+  ensureSpace(48);
   y += 6;
   doc.setFont('helvetica', 'italic');
   doc.setFontSize(8.5);
   doc.setTextColor(...MUTED);
   const note = doc.splitTextToSize(
-    'Information only — not medical advice or a diagnosis. Please discuss with your GP or pharmacist. Interaction data sourced from NHS · BNF via a healthcare API.',
+    'Information only. Not medical advice or a diagnosis. Please discuss with your GP or pharmacist. Interaction data sourced from NHS · BNF via a healthcare API.',
     W - M * 2,
   );
   doc.text(note, M, y);

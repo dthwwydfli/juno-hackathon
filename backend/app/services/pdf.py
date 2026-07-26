@@ -16,8 +16,16 @@ INK = colors.HexColor("#1A1A17")
 MUTED = colors.HexColor("#6B6B63")
 RULE = colors.HexColor("#ECEBE6")
 
+# GP-facing reading order: NHS prescriptions first, then OTC, then private.
+CATEGORY_ORDER = {"NHS": 0, "OTC": 1, "Private": 2}
+
+
+def _by_category(meds: list) -> list:
+    return sorted(meds, key=lambda m: CATEGORY_ORDER.get(m.category, 99))
+
+
 PDF_DISCLAIMER = (
-    "Information only — not medical advice or a diagnosis. Please discuss with your GP or "
+    "Information only. Not medical advice or a diagnosis. Please discuss with your GP or "
     "pharmacist. Interaction data sourced from NHS · BNF via a healthcare API."
 )
 
@@ -170,38 +178,49 @@ def _render_summary_pdf(
     c.drawString(m, y, f"Generated {generated}")
     y -= 34
 
-    # Current medications
-    c.setFont("Helvetica-Bold", 11)
-    c.setFillColor(INK)
-    c.drawString(m, y, f"CURRENT MEDICATIONS ({len(active)})")
-    y -= 8
-    c.line(m, y, w - m, y)
-    y -= 20
-
-    for med in active:
-        ensure_space(40)
-        title = f"{med.name} {med.dose}".strip()
+    def section_heading(label: str, count: int) -> None:
+        nonlocal y
+        ensure_space(60)
         c.setFont("Helvetica-Bold", 11)
         c.setFillColor(INK)
-        c.drawString(m, y, title)
+        c.drawString(m, y, f"{label} ({count})")
+        y -= 8
+        c.setStrokeColor(RULE)
+        c.line(m, y, w - m, y)
+        y -= 20
+
+    def med_row(med) -> None:
+        """Shared by current and archived so the two tables cannot drift apart."""
+        nonlocal y
+        ensure_space(40)
+        c.setFont("Helvetica-Bold", 11)
+        c.setFillColor(INK)
+        c.drawString(m, y, f"{med.name} {med.dose}".strip())
         c.setFont("Helvetica", 11)
         c.setFillColor(MUTED)
         c.drawRightString(w - m, y, med.category)
         y -= 14
-        sched = med.schedule_label or ", ".join(med.times) if med.times else ""
+        sched = med.schedule_label or (", ".join(med.times) if med.times else "")
         sub = " · ".join(p for p in [med.brand, sched, med.route] if p)
         c.setFont("Helvetica", 9.5)
         c.drawString(m, y, sub)
         y -= 22
 
+    active = _by_category(active)
+    archived = _by_category(archived)
+
+    section_heading("CURRENT MEDICATIONS", len(active))
+    for med in active:
+        med_row(med)
+
+    if archived:
+        y -= 8
+        section_heading("ARCHIVED", len(archived))
+        for med in archived:
+            med_row(med)
+
     y -= 8
-    ensure_space(48)
-    c.setFont("Helvetica-Bold", 11)
-    c.setFillColor(INK)
-    c.drawString(m, y, f"POTENTIAL INTERACTIONS ({len(interactions)})")
-    y -= 8
-    c.line(m, y, w - m, y)
-    y -= 20
+    section_heading("POTENTIAL INTERACTIONS", len(interactions))
 
     for ix in interactions:
         ensure_space(56)
@@ -217,24 +236,7 @@ def _render_summary_pdf(
             y -= 12
         y -= 12
 
-    if archived:
-        ensure_space(48)
-        y -= 8
-        c.setFont("Helvetica-Bold", 11)
-        c.setFillColor(INK)
-        c.drawString(m, y, f"ARCHIVED ({len(archived)})")
-        y -= 8
-        c.line(m, y, w - m, y)
-        y -= 18
-        names = ",  ".join(f"{med.name} {med.dose}".strip() for med in archived)
-        c.setFont("Helvetica", 9.5)
-        c.setFillColor(MUTED)
-        for line in _wrap_text(names, w - 2 * m, c):
-            c.drawString(m, y, line)
-            y -= 12
-        y -= 8
-
-    ensure_space(40)
+    ensure_space(48)
     y -= 6
     c.setFont("Helvetica-Oblique", 8.5)
     c.setFillColor(MUTED)
