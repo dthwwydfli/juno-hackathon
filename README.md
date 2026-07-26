@@ -1,6 +1,6 @@
 # juno-hackathon
 
-Medication safety hackathon project — see [plan.md](plan.md), **[first.md](first.md)** (frontend wiring), [docs/mobbin-inspirations.md](docs/mobbin-inspirations.md) (UI references), and [backend/README.md](backend/README.md).
+Medication safety hackathon project — see [plan.md](plan.md), **[first.md](first.md)** (frontend wiring), [docs/mobbin-inspirations.md](docs/mobbin-inspirations.md) (UI references), [docs/hosting-and-data.md](docs/hosting-and-data.md) (Supabase Postgres + FastAPI; optional SQLite locally), [supabase/README.md](supabase/README.md) (migrations + demo seed), and [backend/README.md](backend/README.md).
 
 ## Frontend
 
@@ -13,6 +13,10 @@ Open the app at **http://localhost:5173** (API defaults to **http://localhost:80
 Phone / LAN testing for QR scans is optional later — see comments in `frontend/.env.example`.
 
 **Vercel + phone barcode scanning:** [docs/deploy-vercel-phone-scan.md](docs/deploy-vercel-phone-scan.md)
+
+**Hosting choices (Supabase app DB + FastAPI):** [docs/hosting-and-data.md](docs/hosting-and-data.md)
+
+**Vercel deploy:** set `VITE_API_BASE_URL`, `VITE_PUBLIC_PDF_ORIGIN`, and `VITE_USER_ID` in the project env vars, then redeploy — otherwise the built app defaults to `http://localhost:8000` and API calls fail on phones.
 
 Add `MEDDATA_API_KEY` in backend `.env` for faster interaction checks (see [backend/README.md](backend/README.md)).
 
