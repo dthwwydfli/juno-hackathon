@@ -38,6 +38,14 @@ Update `.env`:
 |------|----------------------|
 | **ngrok** or **Cloudflare Tunnel** | **Yes** — stable URL, no browser gate on API `fetch()` |
 | **localtunnel** (`*.loca.lt`) | **Dev only** — may return HTTP **511** (“Network Authentication Required”) until each user unlocks the tunnel in a browser tab. The app sends `Bypass-Tunnel-Reminder` automatically, but judges on new networks may still hit limits. Prefer ngrok for demos. |
+| **Render** (recommended for stable demos) | **Yes** — deploy from [`render.yaml`](../render.yaml) at repo root; set secret env vars in the dashboard, then run `backend/scripts/sync_vercel_api_url.sh https://<service>.onrender.com` |
+
+**One-click Render (after merging `render.yaml` to `main`):**
+
+[Deploy to Render](https://render.com/deploy?repo=https://github.com/dthwwydfli/juno-hackathon)
+
+Set `MEDDATA_API_KEY`, `OPENFDA_API_KEY`, optional `APP_DATABASE_URL`, and `PUBLIC_BASE_URL` to your service URL. Or run `RENDER_API_KEY=… RENDER_OWNER_ID=… python backend/scripts/render_bootstrap.py` locally.
+
 
 Quick tunnel (**recommended for demos** — ngrok):
 
