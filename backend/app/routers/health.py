@@ -3,6 +3,7 @@ from pathlib import Path
 from fastapi import APIRouter
 
 from app.config import settings
+from app.db.models import app_db_backend, app_db_ok
 from app.dmd.sync import SAMPLE_DB_ROW_THRESHOLD, gtin_lookup_count
 
 router = APIRouter(tags=["health"])
@@ -15,12 +16,12 @@ def health():
     trud_configured = bool(
         settings.trud_api_key.strip() and settings.trud_dmd_item_id.strip()
     )
-    app_db_path = Path(settings.app_db_path)
     return {
         "status": "ok",
         "dmd_gtin_count": count,
         "dmd_ready": count > SAMPLE_DB_ROW_THRESHOLD,
         "trud_configured": trud_configured,
         "meddata_configured": bool(settings.meddata_api_key.strip()),
-        "app_db_ok": app_db_path.is_file(),
+        "app_db_backend": app_db_backend(),
+        "app_db_ok": app_db_ok(),
     }

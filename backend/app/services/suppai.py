@@ -193,6 +193,8 @@ async def check_pair_suppai(
     name_b: str,
     agent_a: dict[str, Any] | None = None,
     agent_b: dict[str, Any] | None = None,
+    *,
+    retry_empty_evidence: bool = True,
 ) -> tuple[dict[str, Any] | None, dict[str, Any] | None]:
     """Look up a pair. Agents can be passed in so they are resolved once per med."""
     if agent_a is None:
@@ -208,11 +210,19 @@ async def check_pair_suppai(
     cui_b = agent_b.get("cui")
     if not cui_a or not cui_b:
         return None, None
-    interaction = await fetch_interaction_evidence(str(cui_a), str(cui_b))
-    if not interaction:
-        return None, None
-    evidence = pick_evidence_sentences(interaction)
-    if not evidence:
-        # 200 with no usable sentences means no interaction, not an unknown one.
-        return None, None
-    return interaction, suppai_source_entry(interaction, evidence, name_a, name_b)
+
+    async def _once() -> tuple[dict[str, Any] | None, dict[str, Any] | None]:
+        interaction = await fetch_interaction_evidence(str(cui_a), str(cui_b))
+        if not interaction:
+            return None, None
+        evidence = pick_evidence_sentences(interaction)
+        if not evidence:
+            return None, None
+        return interaction, suppai_source_entry(interaction, evidence, name_a, name_b)
+
+    hit = await _once()
+    if hit[0] is not None:
+        return hit
+    if retry_empty_evidence:
+        return await _once()
+    return None, None

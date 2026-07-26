@@ -14,6 +14,8 @@ class Settings(BaseSettings):
 
     dmd_db_path: Path = _BACKEND_ROOT / "data" / "dmd.sqlite"
     app_db_path: Path = _BACKEND_ROOT / "data" / "app.sqlite"
+    # Supabase Postgres (transaction pooler). Empty = local app.sqlite
+    app_database_url: str = ""
     trud_api_key: str = ""
     trud_dmd_item_id: str = ""
     openfda_api_key: str = ""
@@ -29,6 +31,10 @@ class Settings(BaseSettings):
     @property
     def cors_origin_list(self) -> list[str]:
         return [o.strip() for o in self.cors_origins.split(",") if o.strip()]
+
+    @property
+    def uses_postgres_app_db(self) -> bool:
+        return bool(self.app_database_url.strip())
 
 
 settings = Settings()

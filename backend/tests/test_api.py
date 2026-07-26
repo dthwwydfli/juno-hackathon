@@ -25,6 +25,8 @@ def test_health():
     assert r.status_code == 200
     body = r.json()
     assert body["status"] == "ok"
+    assert body.get("app_db_backend") == "sqlite"
+    assert body.get("app_db_ok") is True
     assert "dmd_gtin_count" in body
     assert "dmd_ready" in body
     assert "trud_configured" in body
