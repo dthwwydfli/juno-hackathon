@@ -12,7 +12,7 @@ export type StoryChapter = {
 export const STORY_CHAPTERS: StoryChapter[] = [
   {
     id: 'intro',
-    title: 'Every medication you take, in one pocket.',
+    title: 'Every medicine and supplement, in one pocket.',
     body:
       'Bring your NHS, private and over-the-counter medicines together, get a heads-up on potential interactions, and share a clear summary with your GP.',
     image: '/landing/v5-home-light.png',

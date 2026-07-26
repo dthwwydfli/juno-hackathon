@@ -1,6 +1,6 @@
 # Pocketary
 
-> Every medication you take, in one pocket.
+> Every medicine and supplement, in one pocket.
 
 Pocketary is a personal medicine cabinet you can carry on your phone. Track NHS, private, and over-the-counter medicines in one place, get plain-language signals when combinations might need a professional look, and share a structured summary with your GP when you need to.
 
