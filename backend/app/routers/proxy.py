@@ -12,6 +12,11 @@ async def proxy_meddata_interactions_check(items: str = Query(..., min_length=1)
     if len(names) < 2:
         raise HTTPException(status_code=400, detail="At least two item names required")
     result = await check_unified_interactions(names[:10])
-    if result is None:
-        return {"interactions": [], "unavailable": True}
-    return result
+    if not result.ok:
+        return {
+            "interactions": [],
+            "unavailable": True,
+            "status": result.status,
+            "detail": result.detail,
+        }
+    return result.data or {"interactions": []}

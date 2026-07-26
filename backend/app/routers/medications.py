@@ -76,6 +76,25 @@ def create_medication(
     db: Session = Depends(get_db),
     user_id: str = Depends(get_user_id),
 ):
+    # Idempotent by (user, gtin or display name): the cabinet sync replays the
+    # whole list on every check, and a non-idempotent create silently multiplied
+    # rows, which multiplied the interaction pairs too.
+    existing = _find_existing(db, user_id, body.gtin, body.display_name)
+    if existing is not None:
+        existing.display_name = body.display_name
+        existing.category = body.category
+        existing.dosage = body.dosage
+        existing.schedule = json.dumps(body.schedule)
+        if body.dmd_code:
+            existing.dmd_code = body.dmd_code
+            existing.dmd_code_type = body.dmd_code_type
+        if body.gtin:
+            existing.gtin = body.gtin
+        existing.archived_at = None
+        db.commit()
+        db.refresh(existing)
+        return _med_to_out(existing)
+
     med = Medication(
         user_id=user_id,
         display_name=body.display_name,
@@ -91,6 +110,17 @@ def create_medication(
     db.commit()
     db.refresh(med)
     return _med_to_out(med)
+
+
+def _find_existing(
+    db: Session, user_id: str, gtin: str | None, display_name: str
+) -> Medication | None:
+    q = db.query(Medication).filter(Medication.user_id == user_id)
+    if gtin:
+        row = q.filter(Medication.gtin == gtin).first()
+        if row is not None:
+            return row
+    return q.filter(Medication.display_name == display_name).first()
 
 
 @router.get("", response_model=list[MedicationOut])

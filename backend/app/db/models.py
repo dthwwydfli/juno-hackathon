@@ -105,6 +105,41 @@ def init_app_db() -> None:
     settings.app_db_path.parent.mkdir(parents=True, exist_ok=True)
     Base.metadata.create_all(bind=engine)
     _ensure_gp_share_snapshot_column()
+    dedupe_medications()
+
+
+def dedupe_medications() -> int:
+    """Collapse duplicate medications left by the old non-idempotent sync.
+
+    Keeps the oldest row per (user_id, gtin or display_name) and drops the rest
+    along with any interaction records that pointed at them.
+    """
+    from sqlalchemy import delete, select
+
+    removed = 0
+    with SessionLocal() as db:
+        rows = db.execute(
+            select(Medication).order_by(Medication.id.asc())
+        ).scalars().all()
+        seen: dict[tuple[str, str], int] = {}
+        stale: list[int] = []
+        for row in rows:
+            key = (row.user_id, (row.gtin or row.display_name).lower())
+            if key in seen:
+                stale.append(row.id)
+            else:
+                seen[key] = row.id
+        if stale:
+            db.execute(
+                delete(InteractionRecord).where(
+                    InteractionRecord.med_a_id.in_(stale)
+                    | InteractionRecord.med_b_id.in_(stale)
+                )
+            )
+            db.execute(delete(Medication).where(Medication.id.in_(stale)))
+            db.commit()
+            removed = len(stale)
+    return removed
 
 
 def _ensure_gp_share_snapshot_column() -> None:

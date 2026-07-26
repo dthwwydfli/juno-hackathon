@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 
 from app.config import DISCLAIMER
 from app.db.models import InteractionRecord, Medication
+from app.services.drug_names import primary_lookup_name
 from app.services.meddata import (
     MedDataResult,
     check_unified_interactions,
@@ -22,6 +23,13 @@ log = logging.getLogger(__name__)
 
 # Supp.AI is unmetered but per-pair; keep a lid on parallel sockets.
 _SUPPAI_CONCURRENCY = 6
+
+
+_LABEL_COMENTION_PREFIX = "named in the fda drug label"
+
+
+def _is_label_comention(description: str) -> bool:
+    return description.strip().lower().startswith(_LABEL_COMENTION_PREFIX)
 
 
 def _meddata_has_signal(meddata_row: dict[str, Any] | None) -> bool:
@@ -51,7 +59,17 @@ def build_pair_summary(
         desc = meddata_row.get("description") or (
             f"Interaction data was found for {name_a} and {name_b}."
         )
-        summary_parts.append(desc)
+        if _is_label_comention(desc):
+            # These rows are "both names appear in the same FDA label section".
+            # The raw text is a truncated ingredient list and is unreadable on a
+            # card, so summarise it and keep the excerpt for the detail page.
+            summary_parts.append(
+                f"{primary_lookup_name(name_a)} and {primary_lookup_name(name_b)} are "
+                "listed together in the US FDA drug label interactions section. "
+                "Check with your pharmacist or GP whether it applies to you."
+            )
+        else:
+            summary_parts.append(desc)
         full_sections.append(f"What we found (MedData)\n{desc}")
         src = meddata_row.get("source")
         if src:
@@ -60,6 +78,13 @@ def build_pair_summary(
     if suppai_source:
         evidence = suppai_source.get("evidence") or []
         lead = evidence[0].get("sentence", "") if evidence else ""
+        if lead and not meddata_row:
+            # Evidence sentences are lifted from paper abstracts and read badly
+            # on their own, so give the card a plain-language opening line.
+            summary_parts.append(
+                f"Published research reports a possible interaction between "
+                f"{primary_lookup_name(name_a)} and {primary_lookup_name(name_b)}."
+            )
         if lead:
             summary_parts.append(lead)
         ev_lines = []
@@ -94,8 +119,9 @@ def build_pair_summary(
     if not summary.endswith("."):
         summary = f"{summary} Discuss with a medical professional."
 
+    # DISCLAIMER is appended by the caller and already says to discuss with a
+    # pharmacist or GP, so no extra closing line here.
     full_text = "\n\n".join(full_sections) if full_sections else summary
-    full_text = f"{full_text}\n\nDiscuss with a pharmacist or GP before changing your medicines."
 
     has_signal = bool(meddata_row or suppai_source or openfda_evidence)
     if has_signal and severity == "none":

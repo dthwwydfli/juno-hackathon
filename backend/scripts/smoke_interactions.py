@@ -1,5 +1,10 @@
 #!/usr/bin/env python3
-"""Smoke-test interaction pipeline for scanned-style display names (live APIs)."""
+"""Smoke-test the interaction pipeline against the live APIs.
+
+MedData is metered, so this script makes exactly one batched MedData request
+covering the whole fixture cabinet and evaluates every pair against it. Repeat
+runs within the cache TTL cost nothing at all.
+"""
 
 import asyncio
 import json
@@ -17,15 +22,6 @@ class PairCase:
     name_b: str
 
 
-PAIRS = [
-    PairCase("Warfarin 3mg tablets", "Fish oil 1000mg capsules"),
-    PairCase("Aspirin 300mg tablets (demo GTIN)", "Ibuprofen 200mg tablets (sample)"),
-    PairCase("Paracetamol 500mg tablets (sample)", "Ibuprofen 200mg tablets (sample)"),
-    PairCase("Warfarin 3mg tablets", "Ginkgo biloba 120mg tablets"),
-    PairCase("Atorvastatin 20mg film-coated tablets", "Grapefruit juice (online)"),
-    PairCase("Metformin 500mg tablets", "Vitamin B12 1000mcg tablets"),
-]
-
 # Matches frontend/src/data/fixtures.ts active cabinet (dmdDisplayName values).
 FIXTURE_CABINET = [
     "Atorvastatin 20mg film-coated tablets",
@@ -38,22 +34,26 @@ FIXTURE_CABINET = [
     "Grapefruit juice (online)",
 ]
 
+PAIRS = [
+    PairCase("Warfarin 3mg tablets", "Fish oil 1000mg capsules"),
+    PairCase("Aspirin 300mg tablets (demo GTIN)", "Ibuprofen 200mg tablets (sample)"),
+    PairCase("Atorvastatin 20mg film-coated tablets", "Grapefruit juice (online)"),
+    PairCase("Fish oil 1000mg capsules", "Ramipril 5 mg"),
+]
 
-async def evaluate_pair(case: PairCase) -> dict:
-    meddata_row = None
-    if settings.meddata_api_key:
-        batch = await check_unified_interactions(
-            [case.name_a, case.name_b]
-        )
-        meddata_row = find_pair_interaction(batch, case.name_a, case.name_b)
+
+async def evaluate_pair(case: PairCase, batch) -> dict:
+    meddata_row = find_pair_interaction(batch, case.name_a, case.name_b)
+
+    agent_a = await search_agent(case.name_a)
+    agent_b = await search_agent(case.name_b)
 
     suppai_called = meddata_row is None
     suppai_source = None
     if suppai_called:
-        _, suppai_source = await check_pair_suppai(case.name_a, case.name_b)
-
-    agent_a = await search_agent(case.name_a)
-    agent_b = await search_agent(case.name_b)
+        _, suppai_source = await check_pair_suppai(
+            case.name_a, case.name_b, agent_a, agent_b
+        )
 
     return {
         "med_a": case.name_a,
@@ -65,50 +65,34 @@ async def evaluate_pair(case: PairCase) -> dict:
         "suppai_called": suppai_called,
         "suppai_hit": suppai_source is not None,
         "suppai_evidence": len((suppai_source or {}).get("evidence") or []),
-        "suppai_interaction_id": (suppai_source or {}).get("interaction_id"),
         "agent_a": (agent_a or {}).get("preferred_name"),
         "agent_b": (agent_b or {}).get("preferred_name"),
     }
 
 
-async def evaluate_fixture_cabinet() -> None:
-    print("\n=== FIXTURE_CABINET batch (frontend blend) ===")
-    if not settings.meddata_api_key:
-        print("  skipped: no MEDDATA_API_KEY")
-        return
-    batch = await check_unified_interactions(FIXTURE_CABINET)
-    if not batch:
-        print("  no batch result (API error or quota)")
-        return
-    rows = batch.get("interactions") or []
-    print(f"  interaction count: {len(rows)}")
-    for row in rows:
+async def main() -> None:
+    print("MEDDATA_API_KEY set:", bool(settings.meddata_api_key))
+
+    result = await check_unified_interactions(FIXTURE_CABINET)
+    print(
+        f"MedData status={result.status} rows={len(result.rows)} "
+        f"http_requests={result.requests_made} detail={result.detail!r}"
+    )
+    for row in result.rows:
         print(
             f"  - {row.get('item_1_name')} + {row.get('item_2_name')}"
             f" | {row.get('severity')}"
         )
-    expected_pairs = [
-        ("Warfarin 3mg tablets", "Fish oil 1000mg capsules"),
-        ("Aspirin 300mg tablets (demo GTIN)", "Ibuprofen 200mg tablets (sample)"),
-        ("Atorvastatin 20mg film-coated tablets", "Grapefruit juice (online)"),
-    ]
-    print("  expected pair hits:")
-    for name_a, name_b in expected_pairs:
-        hit = find_pair_interaction(batch, name_a, name_b)
-        print(f"    {'yes' if hit else 'no'}: {name_a} + {name_b}")
 
+    batch = result.data if result.ok else None
 
-async def main() -> None:
-    print("MEDDATA_API_KEY set:", bool(settings.meddata_api_key))
     results = []
     for case in PAIRS:
-        row = await evaluate_pair(case)
+        row = await evaluate_pair(case, batch)
         results.append(row)
         print("---")
         print(f"{row['med_a']} + {row['med_b']}")
-        print(
-            f"  lookup: {row['lookup_a']} | {row['lookup_b']}"
-        )
+        print(f"  lookup: {row['lookup_a']} | {row['lookup_b']}")
         print(
             f"  meddata: {'yes' if row['meddata_hit'] else 'no'}"
             f"  suppai_called: {row['suppai_called']}"
@@ -117,10 +101,6 @@ async def main() -> None:
         )
         if row["agent_a"] or row["agent_b"]:
             print(f"  agents: {row['agent_a']} + {row['agent_b']}")
-        if row["suppai_interaction_id"]:
-            print(f"  suppai_id: {row['suppai_interaction_id']}")
-
-    await evaluate_fixture_cabinet()
 
     print("\nJSON summary:")
     print(json.dumps(results, indent=2))

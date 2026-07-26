@@ -10,7 +10,7 @@ from fastapi.staticfiles import StaticFiles
 from app.config import settings
 from app.db.models import init_app_db
 from app.dmd.sync import SAMPLE_DB_ROW_THRESHOLD, gtin_lookup_count, sync_dmd_from_trud
-from app.routers import gp, health, interactions, lookup, medications, proxy
+from app.routers import gp, health, interactions, lookup, medications, proxy, suppai_proxy
 
 logger = logging.getLogger(__name__)
 _STATIC = Path(__file__).resolve().parent / "static"
@@ -47,6 +47,12 @@ async def lifespan(_app: FastAPI):
 
 
 def create_app() -> FastAPI:
+    # Uvicorn only configures its own loggers, so without this the app's INFO
+    # lines are dropped, including the MedData request/cache accounting that
+    # makes quota use visible.
+    logging.basicConfig(
+        level=logging.INFO, format="%(levelname)s %(name)s: %(message)s"
+    )
     init_app_db()
     app = FastAPI(
         title="Juno Medication Safety API",
@@ -67,6 +73,7 @@ def create_app() -> FastAPI:
     app.include_router(interactions.router)
     app.include_router(gp.router)
     app.include_router(proxy.router)
+    app.include_router(suppai_proxy.router)
     if _STATIC.is_dir():
         app.mount("/static", StaticFiles(directory=_STATIC), name="static")
 
