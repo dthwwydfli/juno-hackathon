@@ -1,61 +1,45 @@
-import { useRef, useState } from 'react';
+import { useRef } from 'react';
 import type { ReactNode } from 'react';
+import { motion, useMotionValue, animate } from 'motion/react';
 import { Icon } from './Icon';
 import './swipe.css';
 
-const ACTION_W = 96;   // width of the revealed archive action
+const ACTION_W = 96;    // width of the revealed archive action
 const OPEN_THRESH = 46; // drag past this to latch open
-const MOVE_THRESH = 7;  // horizontal px before we treat it as a swipe (vs a tap)
+const FLING = 400;      // px/s — a fast flick opens regardless of distance
 
-/** WhatsApp-style swipe row: drag left to reveal an Archive action.
- *  When `disabled`, renders children plainly (used for NHS meds, which auto-archive). */
+/**
+ * Swipe row: drag left to reveal an Archive action.
+ * When `disabled`, renders children plainly (NHS meds auto-archive instead).
+ *
+ * Runs on Motion's drag rather than hand-rolled pointer maths. Besides feeling
+ * better — velocity is taken into account, so a quick flick opens without
+ * having to travel the full distance — this drops the previous version's
+ * stale-closure bug, where `settle()` read `tx` from the render scope and could
+ * latch against an out-of-date position.
+ */
 export function SwipeToArchive({ children, onArchive, disabled }: {
   children: ReactNode;
   onArchive: () => void;
   disabled?: boolean;
 }) {
-  const [tx, setTx] = useState(0);
-  const [dragging, setDragging] = useState(false);
+  const x = useMotionValue(0);
   const openRef = useRef(false);
-  const startRef = useRef<{ x: number; y: number } | null>(null);
-  const movedRef = useRef(false);
+  const draggedRef = useRef(false);
 
   if (disabled) return <>{children}</>;
 
-  const onPointerDown = (e: React.PointerEvent) => {
-    startRef.current = { x: e.clientX, y: e.clientY };
-    movedRef.current = false;
-    setDragging(true);
+  const settleTo = (open: boolean) => {
+    openRef.current = open;
+    animate(x, open ? -ACTION_W : 0, { duration: 0.24, ease: [0.32, 0.72, 0, 1] });
   };
-  const onPointerMove = (e: React.PointerEvent) => {
-    if (!startRef.current) return;
-    const ddx = e.clientX - startRef.current.x;
-    const ddy = e.clientY - startRef.current.y;
-    if (!movedRef.current) {
-      if (Math.abs(ddx) > MOVE_THRESH && Math.abs(ddx) > Math.abs(ddy)) {
-        movedRef.current = true;
-        try { (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId); } catch { /* ignore */ }
-      } else {
-        return;
-      }
-    }
-    const base = openRef.current ? -ACTION_W : 0;
-    setTx(Math.max(-ACTION_W, Math.min(0, base + ddx)));
-  };
-  const settle = () => {
-    startRef.current = null;
-    setDragging(false);
-    if (movedRef.current) {
-      openRef.current = tx < -OPEN_THRESH;
-      setTx(openRef.current ? -ACTION_W : 0);
-    }
-  };
-  const close = () => { openRef.current = false; setTx(0); };
 
-  // Swallow the click that ends a drag, or close on a tap while open.
+  // Swallow the click that ends a drag, or close on a tap while latched open.
+  // Motion does not do this for us, and without it a swipe would also fire the
+  // row's tap handler.
   const onClickCapture = (e: React.MouseEvent) => {
-    if (movedRef.current) { e.stopPropagation(); e.preventDefault(); movedRef.current = false; return; }
-    if (openRef.current) { e.stopPropagation(); e.preventDefault(); close(); }
+    if (draggedRef.current) { e.stopPropagation(); e.preventDefault(); draggedRef.current = false; return; }
+    if (openRef.current) { e.stopPropagation(); e.preventDefault(); settleTo(false); }
   };
 
   return (
@@ -65,22 +49,30 @@ export function SwipeToArchive({ children, onArchive, disabled }: {
         className="swipe-action"
         style={{ width: ACTION_W }}
         aria-label="Archive medication"
-        onClick={() => { close(); onArchive(); }}
+        onClick={() => { settleTo(false); onArchive(); }}
       >
         <Icon name="archive" size={20} />
         <span>Archive</span>
       </button>
-      <div
-        className={`swipe-front${dragging ? ' dragging' : ''}`}
-        style={{ transform: `translateX(${tx}px)` }}
-        onPointerDown={onPointerDown}
-        onPointerMove={onPointerMove}
-        onPointerUp={settle}
-        onPointerCancel={settle}
+
+      <motion.div
+        className="swipe-front"
+        style={{ x }}
+        drag="x"
+        // Locks to one axis from the first few pixels, so a vertical drag is
+        // handed back to the list scroller instead of being eaten here.
+        dragDirectionLock
+        dragConstraints={{ left: -ACTION_W, right: 0 }}
+        dragElastic={{ left: 0.04, right: 0 }}
+        dragMomentum={false}
+        onDragStart={() => { draggedRef.current = true; }}
+        onDragEnd={(_, info) => {
+          settleTo(info.offset.x < -OPEN_THRESH || info.velocity.x < -FLING);
+        }}
         onClickCapture={onClickCapture}
       >
         {children}
-      </div>
+      </motion.div>
     </div>
   );
 }

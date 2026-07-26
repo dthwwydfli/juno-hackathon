@@ -41,3 +41,10 @@
   border-color: color-mix(in srgb, var(--accent) 40%, var(--hairline));
   color: var(--accent-ink);
 }
+
+@media (max-width: 480px) { /* --layout-mobile-max; 16px avoids iOS focus zoom */
+  .text-input,
+  .select-box select {
+    font-size: 16px;
+  }
+}
