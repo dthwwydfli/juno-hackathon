@@ -19,7 +19,7 @@ import {
   type LiveCheckOptions,
   type SourcesStatus,
 } from './interactions-live';
-import { interactionCabinetFingerprint } from './sync-cabinet';
+import { interactionCabinetFingerprint, cabinetWithPending, pendingMedForCheck } from './sync-cabinet';
 
 const norm = (s: string) => s.trim().toLowerCase();
 
@@ -35,6 +35,12 @@ let lastFreshCheckKey = '';
 export function markInteractionCheckFresh(meds: Medication[]): void {
   lastFreshCheckAt = Date.now();
   lastFreshCheckKey = medsCacheKey(meds);
+}
+
+/** Skip post-add Home refresh reuse when the add-flow result may be stale. */
+export function invalidateInteractionFreshSkip(): void {
+  lastFreshCheckAt = 0;
+  lastFreshCheckKey = '';
 }
 
 let inflight: Promise<Interaction[]> | null = null;
@@ -87,7 +93,7 @@ export function getIncompleteCheckReason(): string | null {
   return describeSourceProblem(getSourcesStatus());
 }
 
-export interface RefreshInteractionsOptions extends Pick<LiveCheckOptions, 'onProgress'> {
+export interface RefreshInteractionsOptions extends Pick<LiveCheckOptions, 'onProgress' | 'forceSync' | 'pendingMeds'> {
   force?: boolean;
   /** When false, never reuse a previous cache on failure (used before saving a new med). */
   allowStaleCache?: boolean;
@@ -156,7 +162,11 @@ export async function refreshInteractions(
   inflightKey = key;
   setLiveRefreshState('loading', null);
 
-  inflight = checkInteractionsLive(meds, { onProgress: opts?.onProgress })
+  inflight = checkInteractionsLive(meds, {
+    onProgress: opts?.onProgress,
+    forceSync: opts?.forceSync,
+    pendingMeds: opts?.pendingMeds,
+  })
     .then((result) => {
       markInteractionCheckFresh(meds);
       return applyRefreshResult(key, result.interactions, result.sources, opts);
@@ -204,8 +214,13 @@ function interactionInvolvesMed(med: Medication, rule: { a: string; b: string })
 export async function interactionsForAsync(med: Medication, existing: Medication[]): Promise<Interaction[]> {
   const others = existing.filter((m) => m.id !== med.id && m.status === 'active');
   if (!others.length) return [];
-  const merged = [...others, { ...med, status: 'active' as const }];
-  const list = await refreshInteractions(merged, { force: true, allowStaleCache: false });
+  const cabinet = cabinetWithPending(existing, med);
+  const list = await refreshInteractions(cabinet, {
+    force: true,
+    allowStaleCache: false,
+    forceSync: true,
+    pendingMeds: [pendingMedForCheck(med)],
+  });
   const problem = getIncompleteCheckReason();
   if (problem) {
     throw new InteractionCheckIncompleteError(problem);

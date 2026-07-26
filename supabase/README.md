@@ -31,9 +31,10 @@ The React app does **not** connect to Supabase; it keeps using the REST API and 
    ```bash
    cd backend
    source .venv/bin/activate
-   pip install -e ".[dev]"
-   python scripts/seed_demo_cabinet.py
+   python scripts/bootstrap_supabase.py
    ```
+
+   Or, if tables already exist: `python scripts/seed_demo_cabinet.py`
 
 5. Start API and verify:
 
@@ -51,3 +52,16 @@ All tables have RLS enabled with **no** policies for `anon` / `authenticated`, s
 ## Local SQLite fallback
 
 Leave `APP_DATABASE_URL` empty to use `backend/data/app.sqlite` (default for tests and offline dev).
+
+## Local Postgres (fastest dev without cloud)
+
+If Supabase CLI conflicts with another local project, use Docker Postgres + bootstrap:
+
+```bash
+docker run -d --name juno_app_pg -e POSTGRES_PASSWORD=postgres -p 54332:5432 postgres:15-alpine
+# In backend/.env:
+# APP_DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:54332/postgres
+cd backend && source .venv/bin/activate && python scripts/bootstrap_supabase.py
+```
+
+Uses the same migration SQL as Supabase; `/health` reports `app_db_backend: postgres`. Swap the URL for your **Supabase pooler** URI when deploying.

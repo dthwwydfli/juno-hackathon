@@ -42,7 +42,12 @@ def app_db_backend() -> str:
 
 def _make_app_engine():
     if settings.uses_postgres_app_db:
-        return create_engine(settings.app_database_url.strip(), pool_pre_ping=True)
+        url = settings.app_database_url.strip()
+        if url.startswith("postgresql://"):
+            url = "postgresql+psycopg://" + url[len("postgresql://") :]
+        elif url.startswith("postgres://"):
+            url = "postgresql+psycopg://" + url[len("postgres://") :]
+        return create_engine(url, pool_pre_ping=True)
     return create_engine(
         f"sqlite:///{settings.app_db_path}",
         connect_args={"check_same_thread": False},

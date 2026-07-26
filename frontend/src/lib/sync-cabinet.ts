@@ -26,10 +26,29 @@ function markCabinetSynced(medications: Medication[]): void {
   lastCabinetSyncKey = cabinetSyncKey(medications);
 }
 
+/** Full store cabinet with a not-yet-saved med merged in (add / edit flow). */
+export function cabinetWithPending(all: Medication[], pending: Medication): Medication[] {
+  const activePending = { ...pending, status: 'active' as const };
+  const idx = all.findIndex((m) => m.id === pending.id);
+  if (idx >= 0) {
+    const next = [...all];
+    next[idx] = activePending;
+    return next;
+  }
+  return [...all, activePending];
+}
+
 function toBackendCategory(c: Medication['category']): BackendCategory {
   if (c === 'NHS') return 'nhs_prescription';
   if (c === 'Private') return 'online';
   return 'otc';
+}
+
+export function pendingMedForCheck(m: Medication): { display_name: string; category: string } {
+  return {
+    display_name: toDisplayName(m),
+    category: toBackendCategory(m.category),
+  };
 }
 
 function toDisplayName(m: Medication): string {
@@ -37,6 +56,8 @@ function toDisplayName(m: Medication): string {
   const dose = m.dose?.trim();
   return dose ? `${m.name.trim()} ${dose}`.trim() : m.name.trim();
 }
+
+export { toDisplayName };
 
 /**
  * Must produce the same key as the remote side (`gtin || display_name`).
