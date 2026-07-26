@@ -4,7 +4,8 @@ import { BrowserRouter } from 'react-router-dom';
 import { MotionConfig } from 'motion/react';
 import App from './App';
 import { StoreProvider } from './data/store';
-import { applyThemeToDocument, readStoredTheme, ThemeProvider } from './lib/theme';
+import { applyThemeToDocument, readStoredTheme } from './lib/theme-core';
+import { ThemeProvider } from './lib/theme';
 // Self-hosted, not the Google CDN: the app is an offline-capable PWA and a
 // CDN font would fail to render on a cold offline start.
 // Explicit .css path: the bare specifier makes tsc try to resolve the package

@@ -81,20 +81,3 @@ export function Icon({ name, size = 24, ...rest }: IconProps) {
   );
 }
 
-export const medFormIcon: Record<string, IconName> = {
-  tablet: 'tablet', capsule: 'capsule', liquid: 'liquid', inhaler: 'inhaler', injection: 'injection', other: 'pill',
-};
-
-/** The medication tile glyph follows the route of administration:
- *  Oral → pill, Inhaled → inhaler, Injection → syringe, Topical → tube, etc. */
-export const routeIconName: Record<string, IconName> = {
-  Oral: 'capsule',
-  Sublingual: 'tablet',
-  Topical: 'liquid',
-  Inhaled: 'inhaler',
-  Injection: 'injection',
-  Other: 'pill',
-};
-export function iconForRoute(route?: string): IconName {
-  return (route && routeIconName[route]) || 'capsule';
-}
