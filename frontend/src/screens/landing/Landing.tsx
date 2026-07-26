@@ -1,4 +1,5 @@
 import { useNavigate } from 'react-router-dom';
+import { APP_NAME } from '../../lib/brand';
 import { LandingIcon } from './LandingIcon';
 import { LandingLogo } from './LandingLogo';
 import { LandingStory } from './LandingStory';
@@ -32,7 +33,7 @@ export function Landing() {
       <header className="landing-head">
         <div className="landing-logo">
           <LandingLogo size={38} />
-          Pharmacy in Your Pocket
+          {APP_NAME}
         </div>
         <nav className="landing-nav" aria-label="Marketing">
           <a href="#story">Story</a>
@@ -59,7 +60,7 @@ export function Landing() {
       <footer className="landing-foot">
         <div className="landing-foot-brand">
           <LandingLogo size={32} />
-          Pharmacy in Your Pocket
+          {APP_NAME}
         </div>
         <nav className="landing-foot-nav" aria-label="Footer">
           <a href="#story">Story</a>

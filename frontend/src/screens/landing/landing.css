@@ -337,33 +337,31 @@
   position: relative;
   z-index: 1;
   width: 100%;
-  aspect-ratio: 390 / 844;
-  max-height: min(72dvh, 620px);
-  padding: 7px;
-  background: #1d1d1f;
-  border-radius: 54px;
-  box-shadow: 0 28px 56px -16px rgba(26, 26, 23, 0.22);
-  border: none;
-  overflow: hidden;
+  --landing-phone-cap: min(72dvh, 620px);
+  max-height: var(--landing-phone-cap);
   box-sizing: border-box;
 }
 .landing-device-inline .landing-phone {
-  max-height: min(52dvh, 460px);
+  --landing-phone-cap: min(52dvh, 460px);
 }
 .landing-phone-screen {
-  position: absolute;
-  inset: 7px;
-  border-radius: 46px;
+  position: relative;
+  /* PNGs are full .phone captures (390×844); no extra device bezel. */
+  width: min(100%, calc(var(--landing-phone-cap) * 390 / 844));
+  aspect-ratio: 390 / 844;
+  margin: 0 auto;
+  border-radius: var(--r-phone);
   overflow: hidden;
   background: var(--app-bg);
+  box-shadow: 0 28px 56px -16px rgba(26, 26, 23, 0.22);
 }
 .landing-phone-screen img {
   position: absolute;
   inset: 0;
+  display: block;
   width: 100%;
   height: 100%;
-  object-fit: contain;
-  object-position: center;
+  object-fit: fill;
   opacity: 0;
   transition: opacity var(--dur-slow) var(--ease-out);
 }
