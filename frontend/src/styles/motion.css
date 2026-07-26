@@ -1,0 +1,146 @@
+/* Motion system.
+
+   Everything here is CSS. No animation library was added — the interactions in
+   this app are short, interruptible and state-driven, which is exactly what
+   transitions and keyframes are good at.
+
+   The global reduced-motion guard in base.css neutralises all of it, so no rule
+   below needs its own media query.
+
+   Two curves do all the work:
+     --ease-spring  overshoot-free settle, for anything that moves or scales
+     --ease-out     fast start / long tail, for anything that fades or reveals */
+
+/* ---------- Interactive feedback ----------
+   The app had 14 :active rules and zero transitions, so every press snapped.
+   :where() keeps specificity at 0 so any screen rule still wins. */
+:where(button, a, input, select, [role="button"], [role="radio"], .med, .row) {
+  transition:
+    transform var(--dur-fast) var(--ease-spring),
+    background-color var(--dur-fast) var(--ease-out),
+    border-color var(--dur-fast) var(--ease-out),
+    box-shadow var(--dur-fast) var(--ease-out),
+    color var(--dur-fast) var(--ease-out),
+    opacity var(--dur-fast) var(--ease-out);
+}
+
+/* ---------- Focus ----------
+   There was no :focus-visible anywhere in the app: keyboard focus was
+   completely invisible on every control. */
+:where(button, a, input, select, textarea, [tabindex], [role="button"]):focus-visible {
+  outline: 2px solid var(--accent-solid);
+  outline-offset: 2px;
+}
+
+/* Pointer users get the ring suppressed but keep a surface response. */
+:where(button, [role="button"]):hover:not(:disabled) {
+  transition-duration: var(--dur-fast);
+}
+
+/* ---------- Keyframes ---------- */
+
+/* Entry for list items and revealed blocks. The blur is what makes it read as
+   "materialising" rather than "sliding in". */
+@keyframes blur-fade-up {
+  from { opacity: 0; transform: translate3d(0, 10px, 0); filter: blur(6px); }
+  to   { opacity: 1; transform: translate3d(0, 0, 0);    filter: blur(0); }
+}
+
+@keyframes blur-fade {
+  from { opacity: 0; filter: blur(6px); }
+  to   { opacity: 1; filter: blur(0); }
+}
+
+/* Scan success: a ring expanding out of the reticle on a dm+d match. */
+@keyframes ring-pulse {
+  0%   { opacity: .9; transform: scale(.94); }
+  70%  { opacity: 0;  transform: scale(1.12); }
+  100% { opacity: 0;  transform: scale(1.12); }
+}
+
+/* The interaction count ticking over when a check completes. */
+@keyframes count-tick {
+  0%   { transform: translateY(6px) scale(.9); opacity: 0; }
+  60%  { transform: translateY(-1px) scale(1.02); opacity: 1; }
+  100% { transform: translateY(0) scale(1); opacity: 1; }
+}
+
+@keyframes sheet-rise {
+  from { transform: translate3d(0, 100%, 0); }
+  to   { transform: translate3d(0, 0, 0); }
+}
+
+@keyframes modal-pop {
+  from { transform: scale(.92); opacity: 0; }
+  to   { transform: scale(1);   opacity: 1; }
+}
+
+@keyframes scrim-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* One spinner. The app previously had add-spin and nhs-spin, identical bar the
+   duration. */
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes shimmer {
+  from { background-position: -180% 0; }
+  to   { background-position: 180% 0; }
+}
+
+@keyframes soft-pulse {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: .45; }
+}
+
+/* ---------- Utilities ---------- */
+
+.spin { animation: spin .9s linear infinite; }
+
+.anim-in { animation: blur-fade-up var(--dur-slow) var(--ease-out) backwards; }
+
+/* Staggered list entry.
+   Done with nth-child rather than an inline --i so list screens need no JSX
+   change at all. Beyond the 10th row the delay caps — by then the user is
+   scrolling, and a 500ms+ delay would read as a bug. */
+.stagger > * {
+  animation: blur-fade-up var(--dur-slow) var(--ease-out) backwards;
+}
+.stagger > *:nth-child(1)  { animation-delay: 0ms; }
+.stagger > *:nth-child(2)  { animation-delay: 40ms; }
+.stagger > *:nth-child(3)  { animation-delay: 80ms; }
+.stagger > *:nth-child(4)  { animation-delay: 120ms; }
+.stagger > *:nth-child(5)  { animation-delay: 160ms; }
+.stagger > *:nth-child(6)  { animation-delay: 200ms; }
+.stagger > *:nth-child(7)  { animation-delay: 240ms; }
+.stagger > *:nth-child(8)  { animation-delay: 280ms; }
+.stagger > *:nth-child(9)  { animation-delay: 320ms; }
+.stagger > *:nth-child(n+10) { animation-delay: 360ms; }
+
+/* The blanket `animation-duration: .001ms` in base.css is not enough on its
+   own: an entry animation with `backwards` fill still applies its from-state,
+   so content would flash in from blurred rather than simply being there. */
+@media (prefers-reduced-motion: reduce) {
+  .stagger > *,
+  .anim-in,
+  .skel,
+  .spin {
+    animation: none !important;
+  }
+}
+
+/* Skeleton placeholder — replaces the text-only "Checking…" states. */
+.skel {
+  background: linear-gradient(
+    100deg,
+    var(--surface-sunk) 30%,
+    color-mix(in srgb, var(--surface-sunk) 55%, var(--surface)) 50%,
+    var(--surface-sunk) 70%
+  );
+  background-size: 220% 100%;
+  animation: shimmer 1.5s var(--ease-out) infinite;
+  border-radius: var(--r-sm);
+}

@@ -1,82 +1,321 @@
-/* Design tokens — extracted verbatim from designs/home.html (the source of truth).
-   Three-layer theming: base :root (light) + prefers-color-scheme:dark + explicit
-   [data-theme] overrides so an in-app toggle can force a theme. */
+/* Design tokens.
+
+   Structure — read before editing:
+
+   1. Structural tokens (radius, type, spacing, motion) live once in :root.
+      They do not vary by theme, so they are never duplicated.
+
+   2. Colour/shadow/material tokens are defined ONCE as raw --l-* (light) and
+      --d-* (dark) values, then mapped onto the semantic names by three thin
+      blocks: :root (+ forced light), the prefers-color-scheme media query, and
+      forced dark. The mapping blocks contain no literal values, so light and
+      dark can never silently drift apart — a token added to the raw ramp only
+      needs adding to the mapping list.
+
+   Palette: Coolors "Turquoise Harmony" (#05668D #028090 #00A896 #02C39A #F0F3BD)
+   over the existing warm neutrals.
+
+   Contrast note: --accent (#00A896) is only ~3:1 against white, so it is used
+   for tints, rings, dots and active states — never as a fill behind white text.
+   Fills that carry white text use --accent-solid (#028090, 4.67:1) and links /
+   body accents use --accent-ink (#05668D, 6.4:1). */
+
 :root {
-  --page-bg: #E8E7E2;
-  --app-bg: #F7F7F4;
-  --surface: #FFFFFF;
-  --surface-sunk: #F1F0EB;
-  --text: #1A1A17;
-  --muted: #6B6B63;
-  --faint: #9A998F;
-  --hairline: #ECEBE6;
-  --accent: #12A594;
-  --accent-ink: #0B6E62;
-  --accent-tint: #E7F5F2;
-  --warn: #E5544B;
-  --warn-tint: #FDECEA;
-  /* Interaction amber — legal rule: single amber, never graded/red on interaction surfaces */
-  --amber: #C7791F;
-  --amber-ink: #9A5B12;
-  --amber-tint: #FBEEDD;
-  --nhs: #005EB8;
-  --shadow: 0 1px 2px rgba(26,26,23,.04), 0 8px 24px rgba(26,26,23,.06);
-  --frame-shadow: 0 40px 80px -20px rgba(26,26,23,.35), 0 12px 28px -8px rgba(26,26,23,.22);
-  --tile-a: #E7F5F2; --tile-a-ink: #12A594;
-  --tile-b: #EDEBFB; --tile-b-ink: #6E62D6;
-  --tile-c: #FBEFE4; --tile-c-ink: #C97A2C;
-  --tile-d: #E9F1FA; --tile-d-ink: #3B7BC4;
-  --tile-e: #FBE9EF; --tile-e-ink: #C4487A;
+  /* ---------- Radius scale ---------- */
+  --r-xs: 8px;
+  --r-sm: 12px;
+  --r-md: 16px;
+  --r-lg: 20px;
+  --r-xl: 26px;
+  --r-pill: 999px;
+  --r-phone: 46px;
+
+  /* ---------- Type scale ---------- */
+  --fs-display: 32px;
+  --fs-title: 26px;
+  --fs-headline: 20px;
+  --fs-subhead: 17px;
+  --fs-body: 15px;
+  --fs-callout: 14px;
+  --fs-footnote: 13px;
+  --fs-caption: 12px;
+  --fs-micro: 11px;
+
+  --lsp-display: -.03em;
+  --lsp-title: -.025em;
+  --lsp-headline: -.015em;
+  --lsp-tight: -.01em;
+  --lsp-micro: .06em;
+
+  /* ---------- Spacing ---------- */
+  --s1: 4px;
+  --s2: 8px;
+  --s3: 12px;
+  --s4: 16px;
+  --s5: 20px;
+  --s6: 24px;
+  --s7: 32px;
+  /* One screen inset. Header, segmented control, section labels and cards all
+     used to disagree (16 / 18 / 22 / 24 / 26 / 34 across the app). */
+  --gutter: 20px;
+
+  /* Real-device full-bleed; use @media (max-width: 480px) — vars are not valid in @media. */
+  --layout-mobile-max: 480px;
+
+  /* ---------- Motion ---------- */
+  --ease-spring: cubic-bezier(.32, .72, 0, 1);
+  --ease-out: cubic-bezier(.16, 1, .3, 1);
+  --dur-fast: 140ms;
+  --dur: 240ms;
+  --dur-slow: 420ms;
+
+  /* ---------- Hairline ---------- */
+  --hairline-w: 0.5px;
+
+  /* ---------- Material blur ---------- */
+  --mat-blur: blur(20px) saturate(180%);
+
+  /* =======================================================================
+     RAW LIGHT RAMP
+     ======================================================================= */
+  --l-page-bg: #E8E7E2;
+  --l-app-bg: #F7F7F4;
+  --l-surface: #FFFFFF;
+  --l-surface-sunk: #F1F0EB;
+  --l-text: #1A1A17;
+  --l-muted: #63635B;
+  --l-faint: #929187;
+  --l-hairline: #E2E1DB;
+  --l-field-bg: #FFFFFF;
+
+  --l-accent: #00A896;
+  --l-accent-solid: #028090;
+  --l-accent-ink: #05668D;
+  --l-accent-tint: #E2F3EF;
+  --l-accent-bright: #02C39A;
+  --l-brand-deep: #05668D;
+  --l-brand-mid: #028090;
+  --l-cream: #F0F3BD;
+  --l-on-accent: #FFFFFF;
+
+  --l-warn: #E5544B;
+  --l-warn-tint: #FDECEA;
+  --l-amber: #C7791F;
+  --l-amber-ink: #8F5410;
+  --l-amber-tint: #FBEEDD;
+  --l-amber-line: #EAC99C;
+  --l-nhs: #005EB8;
+
+  --l-elev-1: 0 1px 1.5px rgba(26, 26, 23, .04), 0 4px 14px -6px rgba(26, 26, 23, .10);
+  --l-elev-2: 0 2px 6px rgba(26, 26, 23, .06), 0 22px 48px -16px rgba(26, 26, 23, .22);
+  --l-frame-shadow: 0 40px 80px -20px rgba(26, 26, 23, .35), 0 12px 28px -8px rgba(26, 26, 23, .22);
+  --l-mat-bg: rgba(247, 247, 244, .78);
+  --l-scrim-bg: rgba(26, 26, 23, .46);
+
+  --l-tile-a: #E2F3EF; --l-tile-a-ink: #028090;
+  --l-tile-b: #E9F1FA; --l-tile-b-ink: #2E6FA8;
+  --l-tile-c: #F4EEE1; --l-tile-c-ink: #8A6E2E;
+  --l-tile-d: #EDEBFB; --l-tile-d-ink: #5F53C4;
+  --l-tile-e: #FBE9EF; --l-tile-e-ink: #B33F6E;
+
+  /* =======================================================================
+     RAW DARK RAMP
+     Not a mechanical inversion: #05668D is unreadable as a link colour on a
+     near-black background, so --brand-deep and --accent-ink lift instead.
+     Surfaces are separated more strongly than before — the previous
+     #201F1A on #17170F was effectively invisible.
+     ======================================================================= */
+  --d-page-bg: #0B0B09;
+  --d-app-bg: #141310;
+  --d-surface: #22211B;
+  --d-surface-sunk: #1B1A15;
+  --d-text: #F4F3EC;
+  --d-muted: #A9A89B;
+  --d-faint: #78776C;
+  --d-hairline: #35342C;
+  --d-field-bg: #1B1A15;
+
+  --d-accent: #14C8AF;
+  --d-accent-solid: #0B7F70;
+  --d-accent-ink: #5FE0C9;
+  --d-accent-tint: #10312C;
+  --d-accent-bright: #35DDB8;
+  --d-brand-deep: #7FC9E8;
+  --d-brand-mid: #2AA7B8;
+  --d-cream: #3A3D1E;
+  --d-on-accent: #FFFFFF;
+
+  --d-warn: #F0736A;
+  --d-warn-tint: #3A1D1B;
+  --d-amber: #E0A05C;
+  --d-amber-ink: #F0C38A;
+  --d-amber-tint: #33251A;
+  --d-amber-line: #5A4327;
+  --d-nhs: #4C93D6;
+
+  --d-elev-1: 0 1px 2px rgba(0, 0, 0, .5), 0 6px 18px -6px rgba(0, 0, 0, .6);
+  --d-elev-2: 0 2px 8px rgba(0, 0, 0, .6), 0 24px 52px -16px rgba(0, 0, 0, .75);
+  --d-frame-shadow: 0 40px 90px -20px rgba(0, 0, 0, .7), 0 12px 28px -8px rgba(0, 0, 0, .5);
+  --d-mat-bg: rgba(20, 19, 16, .78);
+  --d-scrim-bg: rgba(0, 0, 0, .55);
+
+  --d-tile-a: #10312C; --d-tile-a-ink: #4FD6C4;
+  --d-tile-b: #172735; --d-tile-b-ink: #7FB6E8;
+  --d-tile-c: #322A1A; --d-tile-c-ink: #D7B872;
+  --d-tile-d: #221E3A; --d-tile-d-ink: #A79CF5;
+  --d-tile-e: #331A26; --d-tile-e-ink: #E890B4;
 }
+
+/* =========================================================================
+   MAPPING — light (default, and when explicitly forced)
+   ========================================================================= */
+:root,
+:root[data-theme="light"] {
+  --page-bg: var(--l-page-bg);
+  --app-bg: var(--l-app-bg);
+  --surface: var(--l-surface);
+  --surface-sunk: var(--l-surface-sunk);
+  --text: var(--l-text);
+  --muted: var(--l-muted);
+  --faint: var(--l-faint);
+  --hairline: var(--l-hairline);
+  --field-bg: var(--l-field-bg);
+
+  --accent: var(--l-accent);
+  --accent-solid: var(--l-accent-solid);
+  --accent-ink: var(--l-accent-ink);
+  --accent-tint: var(--l-accent-tint);
+  --accent-bright: var(--l-accent-bright);
+  --brand-deep: var(--l-brand-deep);
+  --brand-mid: var(--l-brand-mid);
+  --cream: var(--l-cream);
+  --on-accent: var(--l-on-accent);
+
+  --warn: var(--l-warn);
+  --warn-tint: var(--l-warn-tint);
+  --amber: var(--l-amber);
+  --amber-ink: var(--l-amber-ink);
+  --amber-tint: var(--l-amber-tint);
+  --amber-line: var(--l-amber-line);
+  --nhs: var(--l-nhs);
+
+  --elev-1: var(--l-elev-1);
+  --elev-2: var(--l-elev-2);
+  --frame-shadow: var(--l-frame-shadow);
+  --mat-bg: var(--l-mat-bg);
+  --scrim-bg: var(--l-scrim-bg);
+
+  --tile-a: var(--l-tile-a); --tile-a-ink: var(--l-tile-a-ink);
+  --tile-b: var(--l-tile-b); --tile-b-ink: var(--l-tile-b-ink);
+  --tile-c: var(--l-tile-c); --tile-c-ink: var(--l-tile-c-ink);
+  --tile-d: var(--l-tile-d); --tile-d-ink: var(--l-tile-d-ink);
+  --tile-e: var(--l-tile-e); --tile-e-ink: var(--l-tile-e-ink);
+
+  color-scheme: light;
+}
+
+/* =========================================================================
+   MAPPING — dark via system preference (theme.tsx removes data-theme for
+   'system', so this layer is what "System" resolves to)
+   ========================================================================= */
 @media (prefers-color-scheme: dark) {
-  :root {
-    --page-bg: #111110;
-    --app-bg: #17170F;
-    --surface: #201F1A;
-    --surface-sunk: #191813;
-    --text: #F4F3EC;
-    --muted: #A6A599;
-    --faint: #75746A;
-    --hairline: #2C2B24;
-    --accent: #2BC4B0;
-    --accent-ink: #7FE0D3;
-    --accent-tint: #10312D;
-    --warn: #F0736A;
-    --warn-tint: #3A1D1B;
-    --amber: #E0A05C;
-    --amber-ink: #F0C38A;
-    --amber-tint: #33251A;
-    --nhs: #4C93D6;
-    --shadow: 0 1px 2px rgba(0,0,0,.3), 0 8px 24px rgba(0,0,0,.4);
-    --frame-shadow: 0 40px 90px -20px rgba(0,0,0,.7), 0 12px 28px -8px rgba(0,0,0,.5);
-    --tile-a: #10312D; --tile-a-ink: #4FD6C4;
-    --tile-b: #211E3A; --tile-b-ink: #9B90F0;
-    --tile-c: #33251A; --tile-c-ink: #E0A05C;
-    --tile-d: #172735; --tile-d-ink: #6FA9DE;
-    --tile-e: #331A26; --tile-e-ink: #E17FA6;
+  :root:not([data-theme="light"]) {
+    --page-bg: var(--d-page-bg);
+    --app-bg: var(--d-app-bg);
+    --surface: var(--d-surface);
+    --surface-sunk: var(--d-surface-sunk);
+    --text: var(--d-text);
+    --muted: var(--d-muted);
+    --faint: var(--d-faint);
+    --hairline: var(--d-hairline);
+    --field-bg: var(--d-field-bg);
+
+    --accent: var(--d-accent);
+    --accent-solid: var(--d-accent-solid);
+    --accent-ink: var(--d-accent-ink);
+    --accent-tint: var(--d-accent-tint);
+    --accent-bright: var(--d-accent-bright);
+    --brand-deep: var(--d-brand-deep);
+    --brand-mid: var(--d-brand-mid);
+    --cream: var(--d-cream);
+    --on-accent: var(--d-on-accent);
+
+    --warn: var(--d-warn);
+    --warn-tint: var(--d-warn-tint);
+    --amber: var(--d-amber);
+    --amber-ink: var(--d-amber-ink);
+    --amber-tint: var(--d-amber-tint);
+    --amber-line: var(--d-amber-line);
+    --nhs: var(--d-nhs);
+
+    --elev-1: var(--d-elev-1);
+    --elev-2: var(--d-elev-2);
+    --frame-shadow: var(--d-frame-shadow);
+    --mat-bg: var(--d-mat-bg);
+    --scrim-bg: var(--d-scrim-bg);
+
+    --tile-a: var(--d-tile-a); --tile-a-ink: var(--d-tile-a-ink);
+    --tile-b: var(--d-tile-b); --tile-b-ink: var(--d-tile-b-ink);
+    --tile-c: var(--d-tile-c); --tile-c-ink: var(--d-tile-c-ink);
+    --tile-d: var(--d-tile-d); --tile-d-ink: var(--d-tile-d-ink);
+    --tile-e: var(--d-tile-e); --tile-e-ink: var(--d-tile-e-ink);
+
+    color-scheme: dark;
   }
 }
-:root[data-theme="light"] {
-  --page-bg: #E8E7E2; --app-bg: #F7F7F4; --surface: #FFFFFF; --surface-sunk: #F1F0EB;
-  --text: #1A1A17; --muted: #6B6B63; --faint: #9A998F; --hairline: #ECEBE6;
-  --accent: #12A594; --accent-ink: #0B6E62; --accent-tint: #E7F5F2;
-  --warn: #E5544B; --warn-tint: #FDECEA;
-  --amber: #C7791F; --amber-ink: #9A5B12; --amber-tint: #FBEEDD; --nhs: #005EB8;
-  --shadow: 0 1px 2px rgba(26,26,23,.04), 0 8px 24px rgba(26,26,23,.06);
-  --frame-shadow: 0 40px 80px -20px rgba(26,26,23,.35), 0 12px 28px -8px rgba(26,26,23,.22);
-  --tile-a: #E7F5F2; --tile-a-ink: #12A594; --tile-b: #EDEBFB; --tile-b-ink: #6E62D6;
-  --tile-c: #FBEFE4; --tile-c-ink: #C97A2C; --tile-d: #E9F1FA; --tile-d-ink: #3B7BC4;
-  --tile-e: #FBE9EF; --tile-e-ink: #C4487A;
-}
+
+/* =========================================================================
+   MAPPING — dark forced by the in-app toggle
+   ========================================================================= */
 :root[data-theme="dark"] {
-  --page-bg: #111110; --app-bg: #17170F; --surface: #201F1A; --surface-sunk: #191813;
-  --text: #F4F3EC; --muted: #A6A599; --faint: #75746A; --hairline: #2C2B24;
-  --accent: #2BC4B0; --accent-ink: #7FE0D3; --accent-tint: #10312D;
-  --warn: #F0736A; --warn-tint: #3A1D1B;
-  --amber: #E0A05C; --amber-ink: #F0C38A; --amber-tint: #33251A; --nhs: #4C93D6;
-  --shadow: 0 1px 2px rgba(0,0,0,.3), 0 8px 24px rgba(0,0,0,.4);
-  --frame-shadow: 0 40px 90px -20px rgba(0,0,0,.7), 0 12px 28px -8px rgba(0,0,0,.5);
-  --tile-a: #10312D; --tile-a-ink: #4FD6C4; --tile-b: #211E3A; --tile-b-ink: #9B90F0;
-  --tile-c: #33251A; --tile-c-ink: #E0A05C; --tile-d: #172735; --tile-d-ink: #6FA9DE;
-  --tile-e: #331A26; --tile-e-ink: #E17FA6;
+  --page-bg: var(--d-page-bg);
+  --app-bg: var(--d-app-bg);
+  --surface: var(--d-surface);
+  --surface-sunk: var(--d-surface-sunk);
+  --text: var(--d-text);
+  --muted: var(--d-muted);
+  --faint: var(--d-faint);
+  --hairline: var(--d-hairline);
+  --field-bg: var(--d-field-bg);
+
+  --accent: var(--d-accent);
+  --accent-solid: var(--d-accent-solid);
+  --accent-ink: var(--d-accent-ink);
+  --accent-tint: var(--d-accent-tint);
+  --accent-bright: var(--d-accent-bright);
+  --brand-deep: var(--d-brand-deep);
+  --brand-mid: var(--d-brand-mid);
+  --cream: var(--d-cream);
+  --on-accent: var(--d-on-accent);
+
+  --warn: var(--d-warn);
+  --warn-tint: var(--d-warn-tint);
+  --amber: var(--d-amber);
+  --amber-ink: var(--d-amber-ink);
+  --amber-tint: var(--d-amber-tint);
+  --amber-line: var(--d-amber-line);
+  --nhs: var(--d-nhs);
+
+  --elev-1: var(--d-elev-1);
+  --elev-2: var(--d-elev-2);
+  --frame-shadow: var(--d-frame-shadow);
+  --mat-bg: var(--d-mat-bg);
+  --scrim-bg: var(--d-scrim-bg);
+
+  --tile-a: var(--d-tile-a); --tile-a-ink: var(--d-tile-a-ink);
+  --tile-b: var(--d-tile-b); --tile-b-ink: var(--d-tile-b-ink);
+  --tile-c: var(--d-tile-c); --tile-c-ink: var(--d-tile-c-ink);
+  --tile-d: var(--d-tile-d); --tile-d-ink: var(--d-tile-d-ink);
+  --tile-e: var(--d-tile-e); --tile-e-ink: var(--d-tile-e-ink);
+
+  color-scheme: dark;
+}
+
+/* =========================================================================
+   Legacy alias — every screen CSS still refers to --shadow. Keeping it as an
+   alias lets screens migrate to the elevation scale one at a time instead of
+   in one breaking commit.
+   ========================================================================= */
+:root {
+  --shadow: var(--elev-1);
 }

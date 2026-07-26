@@ -1,22 +1,88 @@
 /* Reset + typography + responsive phone frame.
    On desktop the app renders inside a 390×844 phone frame (like the mockups).
-   On mobile (<=430px) it goes full-bleed to fill the device. */
+   On mobile (<=480px, --layout-mobile-max) it goes full-bleed to fill the device. */
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
 html, body, #root { height: 100%; }
 
+:root {
+  /* Lexend is tuned to lower reading effort — the reason it was chosen for a
+     screen full of drug names and doses. The system stack behind it is
+     metrically close enough that swap does not visibly reflow the med list. */
+  --font-ui: "Lexend Variable", -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  /* Atkinson Hyperlegible disambiguates I/l/1 and O/0 — used only where a
+     misread has consequences: doses, times, GTINs, NHS numbers, dates. */
+  --font-num: "Atkinson Hyperlegible", var(--font-ui);
+}
+
 body {
   background: var(--page-bg);
   color: var(--text);
-  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  font-family: var(--font-ui);
+  font-size: var(--fs-body);
   -webkit-font-smoothing: antialiased;
-  font-variant-numeric: tabular-nums;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
 }
 
 button { font: inherit; color: inherit; cursor: pointer; }
 a { color: inherit; text-decoration: none; }
 input, textarea, select { font: inherit; color: inherit; }
+
+/* ---------- Numeric utility ----------
+   Tabular figures used to be set globally on <body>, which applied them to all
+   prose. They belong only on data. */
+.num {
+  font-family: var(--font-num);
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
+}
+
+/* Data that a misreading would make unsafe or confusing: doses, times, NHS
+   numbers, counts, dates. Atkinson disambiguates I/l/1 and O/0.
+   Deliberately NOT applied to mixed prose+number strings, where a second face
+   mid-sentence reads as a mistake. */
+.status > span:first-child,
+.med .dose,
+.segment .count,
+.chip-count,
+.ix-label .lcount,
+.add-val,
+.add-dose-count,
+.arch-head .count,
+.settings-screen .rcount,
+.nhs-screen .hero .h2,
+.nhs-screen .sync .s2,
+.nhs-screen .lv,
+.shr-qchip b,
+.ob-input,
+input[type="date"],
+input[type="number"] {
+  font-family: var(--font-num);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -.005em;
+}
+
+/* ---------- Type scale ---------- */
+.t-display  { font-size: var(--fs-display);  font-weight: 700; letter-spacing: var(--lsp-display);  line-height: 1.1; }
+.t-title    { font-size: var(--fs-title);    font-weight: 700; letter-spacing: var(--lsp-title);    line-height: 1.15; }
+.t-headline { font-size: var(--fs-headline); font-weight: 650; letter-spacing: var(--lsp-headline); line-height: 1.25; }
+.t-subhead  { font-size: var(--fs-subhead);  font-weight: 600; letter-spacing: var(--lsp-tight);    line-height: 1.3; }
+.t-body     { font-size: var(--fs-body);     font-weight: 400; line-height: 1.5; }
+.t-callout  { font-size: var(--fs-callout);  font-weight: 400; line-height: 1.45; }
+.t-footnote { font-size: var(--fs-footnote); font-weight: 400; line-height: 1.4; color: var(--muted); }
+.t-caption  { font-size: var(--fs-caption);  font-weight: 400; line-height: 1.35; color: var(--faint); }
+
+/* The uppercase section label, previously redeclared 10× at 4 sizes and 5
+   letter-spacings across the screens. One definition now. */
+.t-micro {
+  font-size: var(--fs-micro);
+  font-weight: 700;
+  letter-spacing: var(--lsp-micro);
+  text-transform: uppercase;
+  color: var(--faint);
+}
 
 /* Stage centers the phone on desktop */
 .stage {
@@ -25,7 +91,7 @@ input, textarea, select { font: inherit; color: inherit; }
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 24px 16px;
+  padding: var(--s6) var(--s4);
 }
 
 /* Phone frame */
@@ -35,7 +101,7 @@ input, textarea, select { font: inherit; color: inherit; }
   height: 844px;
   max-height: 100dvh;
   background: var(--app-bg);
-  border-radius: 46px;
+  border-radius: var(--r-phone);
   box-shadow: var(--frame-shadow);
   position: relative;
   overflow: hidden;
@@ -43,12 +109,37 @@ input, textarea, select { font: inherit; color: inherit; }
   flex-direction: column;
   color: var(--text);
   border: 1px solid var(--hairline);
+  /* Forces its own compositing layer. Safari otherwise fails to clip
+     transformed descendants against border-radius + overflow:hidden, which is
+     exactly what a sliding screen is. */
+  transform: translateZ(0);
+  isolation: isolate;
+}
+
+/* ---------- Screen stack ----------
+   Both layers are absolute from mount, never static-then-absolute, so an
+   incoming screen cannot push the outgoing one and no reflow disturbs
+   .screen-body's scroll position. The x-overflow is clipped by .phone and
+   creates no scroll container. */
+.screen-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+}
+.screen {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  /* Opaque, so the outgoing screen never shows through the incoming one. */
+  background: var(--app-bg);
 }
 
 /* The scrollable screen body inside the frame */
 .screen-body {
   flex: 1 1 auto;
   overflow-y: auto;
+  overscroll-behavior: contain;
   display: flex;
   flex-direction: column;
   min-height: 0;
@@ -68,7 +159,7 @@ input, textarea, select { font: inherit; color: inherit; }
   z-index: 5;
 }
 
-/* Full-bleed on real phones */
+/* Full-bleed on real phones (--layout-mobile-max) */
 @media (max-width: 480px) {
   .stage { padding: 0; }
   .phone {
@@ -80,9 +171,17 @@ input, textarea, select { font: inherit; color: inherit; }
     box-shadow: none;
   }
   .phone .home-ind { display: none; }
+  /* System status bar replaces the mock 9:41 bar. */
+  .status { display: none; }
+  .screen { padding-top: env(safe-area-inset-top); }
 }
 
 /* Respect users who reduce motion */
 @media (prefers-reduced-motion: reduce) {
-  * { animation-duration: .001ms !important; transition-duration: .001ms !important; }
+  * {
+    animation-duration: .001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .001ms !important;
+    scroll-behavior: auto !important;
+  }
 }

@@ -1,0 +1,62 @@
+/* Tactile Craft layer.
+
+   The point of the grain is that it is not consciously visible. It breaks up
+   the perfectly flat #F7F7F4 fill so the surface reads as paper rather than as
+   an empty div, which is most of the difference between "clean" and "made".
+   Keep the opacity where it is — if you can see the noise, it is too strong.
+
+   Implemented as an inline feTurbulence data-URI: no binary asset, no network
+   request, and it scales to any DPR without a 2x/3x set. */
+
+.phone::before,
+.landing::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 100;
+  pointer-events: none;
+  opacity: .038;
+  mix-blend-mode: multiply;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-repeat: repeat;
+}
+
+/* On a near-black background multiply erases the grain, so invert the blend
+   and drop the strength — light grain on dark reads much louder. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .phone::before,
+  :root:not([data-theme="light"]) .landing::before {
+    mix-blend-mode: screen;
+    opacity: .028;
+  }
+}
+:root[data-theme="dark"] .phone::before,
+:root[data-theme="dark"] .landing::before {
+  mix-blend-mode: screen;
+  opacity: .028;
+}
+
+.landing { position: relative; }
+
+/* ---------- True 0.5px hairlines ----------
+   A 1px border is a hard line at 1x and a heavy one at 2x. Apple's separators
+   are a physical hairline: one device pixel. `border-width: .5px` rounds up on
+   several engines, so draw a 1px pseudo-element and scale it down instead. */
+.hair-b, .hair-t { position: relative; }
+
+.hair-b::after,
+.hair-t::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: var(--hairline);
+  pointer-events: none;
+}
+
+.hair-b::after { bottom: 0; transform: scaleY(.5); transform-origin: bottom; }
+.hair-t::after { top: 0; transform: scaleY(.5); transform-origin: top; }
+
+/* Inset variant for list rows, where the rule starts after the leading icon. */
+.hair-b.hair-inset::after { left: var(--hair-inset, 60px); }
