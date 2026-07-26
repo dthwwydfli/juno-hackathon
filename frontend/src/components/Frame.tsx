@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { APP_NAME } from '../lib/brand';
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Icon } from './Icon';
@@ -29,7 +30,7 @@ export function PhoneShell({ children }: { children: ReactNode }) {
  */
 export function PhoneFrame({ children, label }: { children: ReactNode; label?: string }) {
   return (
-    <div className="screen" role="group" aria-label={label ?? 'Pharmacy in Your Pocket'}>
+    <div className="screen" role="group" aria-label={label ?? APP_NAME}>
       {children}
     </div>
   );

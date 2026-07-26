@@ -298,12 +298,28 @@
   display: flex; align-items: center; justify-content: space-between;
   padding: 8px 20px 0;
 }
+.add-scan-title-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  min-width: 0;
+}
 .add-scan-top .title { font-size: 16px; font-weight: 600; }
+.add-scan-facing {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.55);
+}
 .add-scan-btn {
   width: 38px; height: 38px; border-radius: 50%;
   background: rgba(255,255,255,.12); border: 0; color: var(--on-accent);
   display: flex; align-items: center; justify-content: center;
 }
+.add-scan-btn.on { background: rgba(255,255,255,.28); }
+.add-scan-actions { display: flex; align-items: center; gap: 8px; }
 .add-reticle-wrap {
   position: relative; z-index: 2; flex: 1 1 auto;
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 26px;

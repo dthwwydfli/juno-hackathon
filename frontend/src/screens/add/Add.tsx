@@ -18,6 +18,7 @@ import { AddInteractionResult } from './AddInteractionResult';
 import './add.css';
 
 type Mode = 'manual' | 'camera' | 'scan' | 'filled';
+type CameraFacing = 'environment' | 'user';
 
 const ROUTES = ['Oral', 'Topical', 'Inhaled', 'Injection', 'Sublingual', 'Other'];
 const CATEGORIES: { value: Category; label: string }[] = [
@@ -136,9 +137,23 @@ export function Add() {
   const [scanLine2, setScanLine2] = useState('');
   const [scanLine3, setScanLine3] = useState('Align barcode in frame');
   const [dmdReady, setDmdReady] = useState(true);
+  const [cameraFacing, setCameraFacing] = useState<CameraFacing>('environment');
+  const [multiCamera, setMultiCamera] = useState(false);
+  const [torchOn, setTorchOn] = useState(false);
   const scanLock = useRef(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const readerRef = useRef<BrowserMultiFormatReader | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+
+  const stopScanStream = useCallback(() => {
+    readerRef.current?.reset();
+    readerRef.current = null;
+    const stream = streamRef.current;
+    stream?.getTracks().forEach((t) => t.stop());
+    streamRef.current = null;
+    const v = videoRef.current;
+    if (v) v.srcObject = null;
+  }, []);
 
   const applyLookup = useCallback(async (code: string) => {
     if (scanLock.current) return;
@@ -200,6 +215,30 @@ export function Add() {
     void applyLookup(code);
   };
 
+  const flipCamera = () => {
+    setTorchOn(false);
+    setCameraFacing((f) => (f === 'environment' ? 'user' : 'environment'));
+  };
+
+  const toggleTorch = async () => {
+    const track = streamRef.current?.getVideoTracks()[0];
+    if (!track?.applyConstraints) return;
+    const caps = track.getCapabilities?.() as (MediaTrackCapabilities & { torch?: boolean }) | undefined;
+    if (!caps?.torch) return;
+    const next = !torchOn;
+    try {
+      await track.applyConstraints({ advanced: [{ torch: next }] } as unknown as MediaTrackConstraints);
+      setTorchOn(next);
+    } catch {
+      try {
+        await track.applyConstraints({ torch: next } as unknown as MediaTrackConstraints);
+        setTorchOn(next);
+      } catch {
+        /* torch unsupported on this device/browser */
+      }
+    }
+  };
+
   // Live barcode scan (ZXing + backend dm+d lookup).
   useEffect(() => {
     if (mode !== 'scan') return;
@@ -208,6 +247,7 @@ export function Add() {
     setScanLine3('Align the barcode within the frame');
     setLookupErr('');
     scanLock.current = false;
+    setTorchOn(false);
     void apiFetch<{ dmd_ready?: boolean }>('/health')
       .then((h) => {
         const ready = Boolean(h.dmd_ready);
@@ -226,12 +266,22 @@ export function Add() {
     (async () => {
       try {
         const stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: 'environment' },
+          video: { facingMode: { ideal: cameraFacing } },
         });
-        if (cancelled || !videoRef.current) return;
+        if (cancelled || !videoRef.current) {
+          stream.getTracks().forEach((t) => t.stop());
+          return;
+        }
+        streamRef.current = stream;
         videoRef.current.srcObject = stream;
         await videoRef.current.play();
-        reader.decodeFromVideoDevice(null, 'add-scan-video', (result) => {
+        try {
+          const devices = await navigator.mediaDevices.enumerateDevices();
+          setMultiCamera(devices.filter((d) => d.kind === 'videoinput').length > 1);
+        } catch {
+          setMultiCamera(false);
+        }
+        await reader.decodeFromVideoElementContinuously(videoRef.current, (result) => {
           if (result && !scanLock.current) void applyLookup(result.getText());
         });
       } catch {
@@ -243,14 +293,9 @@ export function Add() {
 
     return () => {
       cancelled = true;
-      readerRef.current?.reset();
-      readerRef.current = null;
-      const v = videoRef.current;
-      const stream = v?.srcObject as MediaStream | null;
-      stream?.getTracks().forEach((t) => t.stop());
-      if (v) v.srcObject = null;
+      stopScanStream();
     };
-  }, [mode, applyLookup]);
+  }, [mode, cameraFacing, applyLookup, stopScanStream]);
 
   const isManualLike = mode === 'manual' || mode === 'filled';
   const canSave = name.trim().length > 0;
@@ -390,10 +435,33 @@ export function Add() {
             <button className="add-scan-btn" aria-label="Close scanner" onClick={() => setMode('camera')}>
               <Icon name="close" size={20} strokeWidth={2} />
             </button>
-            <span className="title">Scan barcode</span>
-            <button className="add-scan-btn" aria-label="Toggle flash">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M13 2L3 14h7l-1 8 10-12h-7l1-8z" /></svg>
-            </button>
+            <div className="add-scan-title-wrap">
+              <span className="title">Scan barcode</span>
+              <span className="add-scan-facing" aria-live="polite">
+                {cameraFacing === 'environment' ? 'Rear' : 'Front'}
+              </span>
+            </div>
+            <div className="add-scan-actions">
+              {multiCamera ? (
+                <button type="button" className="add-scan-btn" aria-label="Switch camera" onClick={flipCamera}>
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                    <path d="M11 19H4a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h3" />
+                    <path d="m8 7 3-3 3 3" />
+                    <path d="M13 5h7a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2h-3" />
+                    <path d="m16 17-3 3-3-3" />
+                  </svg>
+                </button>
+              ) : null}
+              <button
+                type="button"
+                className={`add-scan-btn${torchOn ? ' on' : ''}`}
+                aria-label={torchOn ? 'Turn flash off' : 'Turn flash on'}
+                aria-pressed={torchOn}
+                onClick={() => void toggleTorch()}
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M13 2L3 14h7l-1 8 10-12h-7l1-8z" /></svg>
+              </button>
+            </div>
           </div>
 
           <div className="add-reticle-wrap">
@@ -481,14 +549,9 @@ export function Add() {
             </div>
           </div>
           <div className="add-footer">
-            <button className="add-cta" onClick={async () => {
-              try {
-                await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
-                setMode('scan');
-              } catch {
-                setLookupErr('Camera access denied. Use manual barcode entry on the Manual tab.');
-                setMode('manual');
-              }
+            <button className="add-cta" onClick={() => {
+              setCameraFacing('environment');
+              setMode('scan');
             }}>Request camera access</button>
           </div>
         </>

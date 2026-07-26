@@ -77,7 +77,7 @@ export function buildSummaryPdf(state: AppState, interactions?: Interaction[]): 
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(...TEAL);
   doc.setFontSize(10);
-  doc.text('PHARMACY IN YOUR POCKET', M, y);
+  doc.text('POCKETARY', M, y);
   doc.setTextColor(...MUTED);
   doc.text('MEDICATION SUMMARY', W - M, y, { align: 'right' });
 

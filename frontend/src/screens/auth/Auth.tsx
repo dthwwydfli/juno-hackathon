@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { APP_NAME } from '../../lib/brand';
 import { useNavigate } from 'react-router-dom';
 import { PhoneFrame, StatusBar } from '../../components/Frame';
 import { Icon } from '../../components/Icon';
@@ -10,7 +11,7 @@ function Brand() {
   return (
     <div className="auth-brand">
       <span className="auth-mark"><Icon name="capsule" size={34} strokeWidth={1.8} /></span>
-      <span className="auth-brandname">Pharmacy in Your Pocket</span>
+      <span className="auth-brandname">{APP_NAME}</span>
     </div>
   );
 }
