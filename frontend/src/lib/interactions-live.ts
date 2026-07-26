@@ -6,11 +6,32 @@ export interface LiveCheckOptions {
   onProgress?: (found: Interaction[]) => void;
 }
 
+/** Per-provider outcome, so an outage never renders as "no interactions found". */
+export interface SourcesStatus {
+  meddata?: 'ok' | 'quota_exceeded' | 'unavailable' | 'not_configured';
+  suppai?: 'ok' | 'skipped' | 'unavailable';
+  meddata_detail?: string;
+}
+
 export interface LiveCheckResult {
   interactions: Interaction[];
+  sources: SourcesStatus;
 }
 
 export type LiveRefreshState = 'idle' | 'loading' | 'ready' | 'error';
+
+/** Human-readable reason a check came back incomplete, or null when all sources answered. */
+export function describeSourceProblem(sources: SourcesStatus): string | null {
+  const meddata = sources.meddata;
+  if (!meddata || meddata === 'ok') return null;
+  if (meddata === 'quota_exceeded') {
+    return sources.meddata_detail || 'The MedData request limit has been reached.';
+  }
+  if (meddata === 'not_configured') {
+    return 'MedData is not configured on the server (MEDDATA_API_KEY is not set).';
+  }
+  return sources.meddata_detail || 'The MedData service could not be reached.';
+}
 
 function slug(s: string) {
   return s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'med';
@@ -73,9 +94,15 @@ function buildInteraction(
 interface BackendWarning {
   interaction_id: number;
   summary: string;
+  source?: string;
   med_a: { display_name: string };
   med_b: { display_name: string };
 }
+
+const SOURCE_LABELS: Record<string, string> = {
+  meddata: 'MedData',
+  suppai: 'Supp.AI',
+};
 
 async function mapWarningsToInteractions(
   meds: Medication[],
@@ -94,7 +121,7 @@ async function mapWarningsToInteractions(
       active.find((m) => w.med_b.display_name.toLowerCase().includes(m.name.toLowerCase()));
     if (!medA || !medB) continue;
     let detail = w.summary;
-    let source = 'MedData';
+    let source = SOURCE_LABELS[w.source || ''] || 'MedData';
     try {
       const d = await apiFetch<{ full_text?: string; summary?: string; sources?: { source?: string }[] }>(
         `/interactions/${w.interaction_id}`,
@@ -102,7 +129,7 @@ async function mapWarningsToInteractions(
       );
       detail = d.full_text || d.summary || w.summary;
       const src = d.sources?.[0]?.source;
-      if (src === 'meddata') source = 'MedData';
+      if (src && SOURCE_LABELS[src]) source = SOURCE_LABELS[src];
     } catch {
       /* use summary */
     }
@@ -118,31 +145,25 @@ export async function checkInteractionsLive(
 ): Promise<LiveCheckResult> {
   const active = allMeds.filter((m) => m.status === 'active');
   if (active.length < 2) {
-    return { interactions: [] };
+    return { interactions: [], sources: { meddata: 'ok' } };
   }
 
   await checkApiHealth();
   await syncCabinetToBackend(allMeds.filter((m) => m.status === 'active' || m.status === 'archived'));
 
-  const res = await apiFetch<{ warnings: BackendWarning[] }>('/interactions/check', {
-    method: 'POST',
-    body: JSON.stringify({ meddata_only: true }),
-    timeoutMs: 90_000,
-  });
+  // meddata_only:false lets the server fall back to Supp.AI, which is unmetered
+  // and covers the supplement pairs (e.g. warfarin + fish oil) on its own.
+  const res = await apiFetch<{ warnings: BackendWarning[]; sources_status?: SourcesStatus }>(
+    '/interactions/check',
+    {
+      method: 'POST',
+      body: JSON.stringify({ meddata_only: false }),
+      timeoutMs: 90_000,
+    },
+  );
 
   const list = await mapWarningsToInteractions(allMeds, res.warnings || []);
   opts?.onProgress?.(list);
-  return { interactions: list };
+  return { interactions: list, sources: res.sources_status || {} };
 }
 
-export async function interactionsForLive(
-  med: Medication,
-  existing: Medication[],
-): Promise<Interaction[]> {
-  const active = existing.filter((m) => m.id !== med.id && m.status === 'active');
-  if (!active.length) return [];
-  const all = [...active, { ...med, status: 'active' as const }];
-  const result = await checkInteractionsLive(all);
-  const n = norm(med.name);
-  return result.interactions.filter((i) => norm(i.a) === n || norm(i.b) === n);
-}

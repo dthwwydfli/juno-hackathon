@@ -4,7 +4,11 @@ import { PhoneFrame, StatusBar, AppHeader, BottomNav } from '../../components/Fr
 import { Icon, iconForRoute } from '../../components/Icon';
 import type { IconName } from '../../components/Icon';
 import { useStore, useActiveMeds } from '../../data/store';
-import { getInteractionRefreshError, refreshInteractions } from '../../lib/interactions';
+import {
+  getIncompleteCheckReason,
+  getInteractionRefreshError,
+  refreshInteractions,
+} from '../../lib/interactions';
 import { formatApiReachabilityError } from '../../lib/api';
 import type { Category, Interaction } from '../../data/types';
 import './interactions.css';
@@ -47,15 +51,23 @@ export function Interactions() {
   const [interactions, setInteractions] = useState<Interaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [partial, setPartial] = useState<string | null>(null);
 
-  const runCheck = useCallback(() => {
+  const runCheck = useCallback((force = false) => {
     let live = true;
     setLoading(true);
     setError(null);
+    setPartial(null);
     setInteractions([]);
-    refreshInteractions(state.medications)
+    refreshInteractions(state.medications, { force })
       .then((list) => {
         if (live) {
+          // An empty list only means "all clear" when every source answered.
+          // A dead or rate-limited API must not read as a clean bill of health,
+          // and partial results must say which source was missing.
+          const problem = getIncompleteCheckReason();
+          if (problem && list.length === 0) setError(problem);
+          else if (problem) setPartial(problem);
           setInteractions(list);
           setLoading(false);
         }
@@ -95,12 +107,17 @@ export function Interactions() {
       </div>
       <div className="screen-body">
         <div className="ix-list">
+          {!loading && !error && partial && (
+            <div className="ix-partial" role="status">
+              <Icon name="warning" size={15} strokeWidth={2} />
+              <span>Some sources were unavailable, so this list may be incomplete. {partial}</span>
+            </div>
+          )}
           {loading ? (
             <div className="ix-clear">
               <span className="ci"><Icon name="sync" size={18} strokeWidth={2} /></span>
               <div>
                 <div className="c1">Checking interactions…</div>
-                <div className="c2">MedData and Supp.AI via server</div>
               </div>
             </div>
           ) : error ? (
@@ -109,7 +126,7 @@ export function Interactions() {
               <div>
                 <div className="c1">Could not check interactions</div>
                 <div className="c2">{error}</div>
-                <button type="button" className="ix-readmore" style={{ marginTop: 12 }} onClick={() => runCheck()}>
+                <button type="button" className="ix-readmore" style={{ marginTop: 12 }} onClick={() => runCheck(true)}>
                   Retry
                 </button>
               </div>
@@ -152,7 +169,7 @@ export function Interactions() {
         <span className="gi"><Stethoscope /></span>
         <div className="gt">
           Please discuss with your GP
-          <small>This is guidance only — don’t stop or change any medicine on your own.</small>
+          <small>This is guidance only. Don’t stop or change any medicine on your own.</small>
         </div>
       </div>
 

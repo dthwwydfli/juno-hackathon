@@ -2,13 +2,21 @@ import type { Interaction, Medication } from '../data/types';
 import {
   getCachedInteractions,
   getInteractionByIdCached,
+  getInteractionCacheKey,
   getLastInteractionError,
   getLiveRefreshState,
+  getSourcesStatus,
   setInteractionCache,
   setLiveRefreshState,
+  setSourcesStatus,
 } from './interaction-cache';
 import { formatApiReachabilityError } from './api';
-import { checkInteractionsLive, interactionsForLive, type LiveCheckOptions } from './interactions-live';
+import {
+  checkInteractionsLive,
+  describeSourceProblem,
+  type LiveCheckOptions,
+  type SourcesStatus,
+} from './interactions-live';
 
 const norm = (s: string) => s.trim().toLowerCase();
 
@@ -35,21 +43,40 @@ export function getInteractionRefreshError(): string | null {
   return getLastInteractionError();
 }
 
+export function getInteractionSources(): SourcesStatus {
+  return getSourcesStatus();
+}
+
+/**
+ * Reason an empty result is not trustworthy, or null when every source answered.
+ * Guards against a dead API rendering as a clean "no interactions found".
+ */
+export function getIncompleteCheckReason(): string | null {
+  return describeSourceProblem(getSourcesStatus());
+}
+
 export interface RefreshInteractionsOptions extends Pick<LiveCheckOptions, 'onProgress'> {}
 
 export async function refreshInteractions(
   meds: Medication[],
-  opts?: RefreshInteractionsOptions,
+  opts?: RefreshInteractionsOptions & { force?: boolean },
 ): Promise<Interaction[]> {
   const key = medsCacheKey(meds);
   if (inflight && inflightKey === key) return inflight;
+
+  // Every screen refreshes on mount. Without this the same cabinet is re-checked
+  // on each navigation, and MedData is metered, so repeats cost real quota.
+  if (!opts?.force && getLiveRefreshState() === 'ready' && getInteractionCacheKey() === key) {
+    return getCachedInteractions();
+  }
 
   inflightKey = key;
   setLiveRefreshState('loading', null);
 
   inflight = checkInteractionsLive(meds, { onProgress: opts?.onProgress })
     .then((result) => {
-      setInteractionCache(result.interactions);
+      setInteractionCache(result.interactions, key);
+      setSourcesStatus(result.sources);
       setLiveRefreshState('ready', null);
       return result.interactions;
     })
@@ -69,7 +96,14 @@ export async function refreshInteractions(
 }
 
 export async function interactionsForAsync(med: Medication, existing: Medication[]): Promise<Interaction[]> {
-  return interactionsForLive(med, existing);
+  const others = existing.filter((m) => m.id !== med.id && m.status === 'active');
+  if (!others.length) return [];
+  const merged = [...others, { ...med, status: 'active' as const }];
+  const name = norm(med.name);
+  // Route through refreshInteractions so the result is cached and the screens
+  // that mount afterwards reuse it instead of re-checking the same cabinet.
+  const list = await refreshInteractions(merged);
+  return list.filter((i) => norm(i.a) === name || norm(i.b) === name);
 }
 
 /** @deprecated sync — use interactionsForAsync */

@@ -1,12 +1,20 @@
 import type { Interaction } from '../data/types';
-import type { LiveRefreshState } from './interactions-live';
+import type { LiveRefreshState, SourcesStatus } from './interactions-live';
 
 let cached: Interaction[] = [];
+let cachedKey = '';
 let refreshState: LiveRefreshState = 'idle';
 let lastError: string | null = null;
+let lastSources: SourcesStatus = {};
 
-export function setInteractionCache(list: Interaction[]): void {
+export function setInteractionCache(list: Interaction[], key = ''): void {
   cached = list;
+  cachedKey = key;
+}
+
+/** Cabinet fingerprint the cached list was computed from. */
+export function getInteractionCacheKey(): string {
+  return cachedKey;
 }
 
 export function getInteractionByIdCached(id: string): Interaction | undefined {
@@ -28,4 +36,12 @@ export function setLiveRefreshState(state: LiveRefreshState, errorMessage?: stri
 
 export function getLastInteractionError(): string | null {
   return lastError;
+}
+
+export function setSourcesStatus(sources: SourcesStatus): void {
+  lastSources = sources;
+}
+
+export function getSourcesStatus(): SourcesStatus {
+  return lastSources;
 }

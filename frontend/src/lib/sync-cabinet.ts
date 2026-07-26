@@ -32,14 +32,19 @@ function toBackendCategory(c: Medication['category']): BackendCategory {
   return 'otc';
 }
 
-function cabinetKey(m: Medication): string {
-  return (m.gtin || `${m.name}|${m.dose}`).toLowerCase();
-}
-
 function toDisplayName(m: Medication): string {
   if (m.dmdDisplayName?.trim()) return m.dmdDisplayName.trim();
   const dose = m.dose?.trim();
   return dose ? `${m.name.trim()} ${dose}`.trim() : m.name.trim();
+}
+
+/**
+ * Must produce the same key as the remote side (`gtin || display_name`).
+ * It previously used `name|dose`, which never matched a remote row for meds
+ * without a GTIN, so every sync created a fresh duplicate.
+ */
+function cabinetKey(m: Medication): string {
+  return (m.gtin || toDisplayName(m)).toLowerCase();
 }
 
 function toDosage(m: Medication): string {
@@ -190,14 +195,6 @@ export function cabinetSyncKey(medications: Medication[]): string {
     .join('\n');
 }
 
-export async function runBackendInteractionCheck(): Promise<void> {
-  await apiFetch('/interactions/check', {
-    method: 'POST',
-    body: JSON.stringify({ meddata_only: true }),
-    timeoutMs: 90_000,
-  });
-}
-
 function backendCategoryToFrontend(c: BackendCategory): Medication['category'] {
   if (c === 'nhs_prescription') return 'NHS';
   if (c === 'online') return 'Private';
@@ -264,8 +261,7 @@ export async function prepareGpShare(
   } catch (e) {
     throw new Error(`Could not create share link: ${formatApiReachabilityError(e)}`);
   }
-  void runBackendInteractionCheck().catch(() => {
-    /* backend interaction records; PDF uses client snapshot */
-  });
+  // No interaction check fired here on purpose: the PDF renders from the client
+  // snapshot, and an extra full check would spend MedData quota for nothing.
   return tokenRes;
 }

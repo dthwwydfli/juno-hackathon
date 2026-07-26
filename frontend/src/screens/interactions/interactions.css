@@ -134,3 +134,19 @@
 }
 .ix-gp .gt { font-size: 13.5px; font-weight: 600; color: var(--accent-ink); line-height: 1.35; }
 .ix-gp .gt small { display: block; font-weight: 500; color: var(--muted); font-size: 12px; margin-top: 1px; }
+
+/* Shown when results came back but a source failed, so a partial list is never
+   mistaken for a complete one. */
+.ix-partial {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  background: var(--amber-tint);
+  color: var(--amber-ink);
+  border-radius: 13px;
+  padding: 10px 12px;
+  font-size: 12.5px;
+  line-height: 1.4;
+  margin-bottom: 10px;
+}
+.ix-partial svg { flex: 0 0 auto; margin-top: 1px; color: var(--amber); }
