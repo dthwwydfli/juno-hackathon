@@ -1,21 +1,57 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { BrowserMultiFormatReader } from '@zxing/library';
+import type { CSSProperties } from 'react';
+import {
+  BarcodeFormat,
+  BrowserMultiFormatReader,
+  DecodeHintType,
+} from '@zxing/library';
 import { useNavigate, useParams } from 'react-router-dom';
 import { PhoneFrame, StatusBar, SubHeader, Sheet } from '../../components/Frame';
 import { Icon, iconForRoute } from '../../components/Icon';
 import { SelectField, ChipGroup } from '../../components/form/Form';
 import { TextField } from '../../components/form/Form';
 import { useStore } from '../../data/store';
-import { interactionsForAsync } from '../../lib/interactions';
+import { interactionsForAsync, InteractionCheckIncompleteError } from '../../lib/interactions';
 import { getInteractionById } from '../../lib/interactions';
-import { ApiError, apiFetch } from '../../lib/api';
-import { lookupBarcode } from '../../lib/dmd-map';
+import { ApiError, apiBaseUrl, apiFetch, formatApiReachabilityError } from '../../lib/api';
+import { gtinFromScan, lookupBarcode } from '../../lib/dmd-map';
 import { fmtDate, todayISO, addDays } from '../../lib/dates';
 import type { Category, DoseRow, Interaction, MedForm, Medication } from '../../data/types';
-import { Warning } from '../warning/Warning';
+import { AddClearCheck } from './AddClearCheck';
+import { AddInteractionResult } from './AddInteractionResult';
 import './add.css';
 
 type Mode = 'manual' | 'camera' | 'scan' | 'filled';
+type CameraFacing = 'environment' | 'user';
+type ApiScanStatus = 'checking' | 'ok' | 'error';
+
+const SCAN_HINT = 'Point at the pack barcode — anywhere on screen is fine.';
+
+/** The formats UK medicine packs actually carry. EAN/UPC covers retail packs; FMD packs
+ *  print a 2D GS1 DataMatrix, and dispensing packs often carry GS1-128 or ITF-14 instead
+ *  of a scannable EAN. Restricting to EAN/UPC made those packs undecodable outright. */
+const PACK_CODE_HINTS = new Map<DecodeHintType, BarcodeFormat[]>([
+  [
+    DecodeHintType.POSSIBLE_FORMATS,
+    [
+      BarcodeFormat.EAN_13,
+      BarcodeFormat.EAN_8,
+      BarcodeFormat.UPC_A,
+      BarcodeFormat.UPC_E,
+      BarcodeFormat.DATA_MATRIX,
+      BarcodeFormat.CODE_128,
+      BarcodeFormat.ITF,
+    ],
+  ],
+]);
+
+function apiHostLabel(): string {
+  try {
+    return new URL(apiBaseUrl()).host;
+  } catch {
+    return 'API';
+  }
+}
 
 const ROUTES = ['Oral', 'Topical', 'Inhaled', 'Injection', 'Sublingual', 'Other'];
 const CATEGORIES: { value: Category; label: string }[] = [
@@ -58,7 +94,8 @@ function parseTime(t: string): { h: string; m: string; ap: string } {
   return { h: '10', m: '30', ap: 'AM' };
 }
 
-interface WarnData { newMed: Medication; existing?: Medication; interaction: Interaction }
+interface WarnData { newMed: Medication; existing?: Medication; interaction: Interaction; isEdit?: boolean; extraCount?: number }
+interface ClearCheckData { med: Medication; isEdit?: boolean; cabinetCount: number }
 
 // Optional dev aid: /add?state=camera|scan|filled|time|warning to preview internal states.
 function readInitial(): string | null {
@@ -125,24 +162,54 @@ export function Add() {
   const [dmdCodes, setDmdCodes] = useState(editMed?.dmdCodes);
   const [gtinInput, setGtinInput] = useState('');
   const [lookupErr, setLookupErr] = useState('');
+  const [saveChecking, setSaveChecking] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [clearCheck, setClearCheck] = useState<ClearCheckData | null>(null);
 
   const [scanLine1, setScanLine1] = useState('Scanning…');
   const [scanLine2, setScanLine2] = useState('');
-  const [scanLine3, setScanLine3] = useState('Align barcode in frame');
+  const [scanLine3, setScanLine3] = useState(SCAN_HINT);
   const [dmdReady, setDmdReady] = useState(true);
+  const [apiScanStatus, setApiScanStatus] = useState<ApiScanStatus>('checking');
+  const [cameraFacing, setCameraFacing] = useState<CameraFacing>('environment');
+  const [multiCamera, setMultiCamera] = useState(false);
+  const [torchOn, setTorchOn] = useState(false);
   const scanLock = useRef(false);
+  const dmdReadyRef = useRef(true);
+  const modeRef = useRef(mode);
+  modeRef.current = mode;
+  dmdReadyRef.current = dmdReady;
   const videoRef = useRef<HTMLVideoElement>(null);
   const readerRef = useRef<BrowserMultiFormatReader | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const applyLookupRef = useRef<(code: string) => Promise<void>>(async () => {});
 
-  const applyLookup = useCallback(async (code: string) => {
+  const stopScanStream = useCallback(() => {
+    readerRef.current?.reset();
+    readerRef.current = null;
+    const stream = streamRef.current;
+    stream?.getTracks().forEach((t) => t.stop());
+    streamRef.current = null;
+    const v = videoRef.current;
+    if (v) v.srcObject = null;
+  }, []);
+
+  const applyLookup = useCallback(async (raw: string) => {
     if (scanLock.current) return;
     scanLock.current = true;
+    // Deliberately no reader.reset() here: reset() nulls video.srcObject, which killed the
+    // preview and left the scanner dead after the first code that missed dm+d. scanLock
+    // alone suppresses repeat hits while the lookup is in flight.
+    // A DataMatrix hands back a full GS1 element string; show and store the GTIN from it.
+    const code = gtinFromScan(raw);
+    const fromScan = modeRef.current === 'scan';
     // Clear any error from an earlier misread, otherwise a stale "not in dm+d"
     // message sits under the success banner once a good scan lands.
     setLookupErr('');
     setScanLine1('Looking up…');
     setScanLine2(code);
     setScanLine3('NHS dm+d database');
+    let resumeScan = false;
     try {
       const fields = await lookupBarcode(code);
       setName(fields.name);
@@ -166,26 +233,37 @@ export function Add() {
       setScanned(true);
       setMode('filled');
     } catch (e) {
-      setScanLine1('Not in database');
-      setScanLine2('Try manual entry');
-      setScanLine3('Code: ' + code);
-      if (e instanceof ApiError) {
-        if (e.status === 404 && !dmdReady) {
-          setLookupErr(
-            "NHS dm+d database isn't loaded yet. Wait for sync or check backend logs.",
-          );
-        } else if (e.status === 404) {
-          setLookupErr('Barcode not in NHS dm+d. Try manual entry.');
-        } else {
-          setLookupErr("Can't reach medication lookup service.");
-        }
+      resumeScan = fromScan;
+      if (e instanceof ApiError && e.status === 404 && !dmdReadyRef.current) {
+        setScanLine1('Database loading');
+        setScanLine2('Try again in a moment');
+        setScanLine3('Code: ' + code);
+        setLookupErr(
+          "NHS dm+d database isn't loaded yet. Wait for sync or check backend logs.",
+        );
+      } else if (e instanceof ApiError && e.status === 404) {
+        setScanLine1('Not in database');
+        setScanLine2('Try manual entry');
+        setScanLine3('Code: ' + code);
+        setLookupErr('Barcode not in NHS dm+d. Try manual entry.');
       } else {
-        setLookupErr("Can't reach medication lookup service.");
+        setScanLine1("Can't reach API");
+        setScanLine2('Lookup failed — check connection');
+        setScanLine3('Code: ' + code);
+        setLookupErr(formatApiReachabilityError(e));
       }
     } finally {
       scanLock.current = false;
+      // The decode loop was never stopped, so resuming is purely a matter of putting the
+      // status lines back — releasing scanLock above is what lets the next hit through.
+      if (resumeScan && modeRef.current === 'scan') {
+        setScanLine1('Scanning…');
+        setScanLine2(apiHostLabel());
+        setScanLine3(SCAN_HINT);
+      }
     }
-  }, [dmdReady]);
+  }, []);
+  applyLookupRef.current = applyLookup;
 
   const onManualLookup = () => {
     const code = gtinInput.trim();
@@ -194,40 +272,96 @@ export function Add() {
     void applyLookup(code);
   };
 
+  const flipCamera = () => {
+    setTorchOn(false);
+    setCameraFacing((f) => (f === 'environment' ? 'user' : 'environment'));
+  };
+
+  const toggleTorch = async () => {
+    const track = streamRef.current?.getVideoTracks()[0];
+    if (!track?.applyConstraints) return;
+    const caps = track.getCapabilities?.() as (MediaTrackCapabilities & { torch?: boolean }) | undefined;
+    if (!caps?.torch) return;
+    const next = !torchOn;
+    try {
+      await track.applyConstraints({ advanced: [{ torch: next }] } as unknown as MediaTrackConstraints);
+      setTorchOn(next);
+    } catch {
+      try {
+        await track.applyConstraints({ torch: next } as unknown as MediaTrackConstraints);
+        setTorchOn(next);
+      } catch {
+        /* torch unsupported on this device/browser */
+      }
+    }
+  };
+
   // Live barcode scan (ZXing + backend dm+d lookup).
   useEffect(() => {
     if (mode !== 'scan') return;
     setScanLine1('Scanning…');
     setScanLine2('');
-    setScanLine3('Align the barcode within the frame');
+    setScanLine3(SCAN_HINT);
     setLookupErr('');
+    setApiScanStatus('checking');
     scanLock.current = false;
-    void apiFetch<{ dmd_ready?: boolean }>('/health')
+    setTorchOn(false);
+    void apiFetch<{ dmd_ready?: boolean }>('/health', { timeoutMs: 8_000 })
       .then((h) => {
         const ready = Boolean(h.dmd_ready);
+        dmdReadyRef.current = ready;
         setDmdReady(ready);
-        if (!ready) {
-          setScanLine3('Loading NHS dm+d database…');
-        }
+        setApiScanStatus('ok');
+        setScanLine2((line) => (line === '' ? apiHostLabel() : line));
+        setScanLine3((line) => {
+          if (line !== SCAN_HINT && line !== 'Loading NHS dm+d database…') return line;
+          return ready ? SCAN_HINT : 'Loading NHS dm+d database…';
+        });
       })
-      .catch(() => {
+      .catch((e) => {
+        dmdReadyRef.current = false;
         setDmdReady(false);
+        setApiScanStatus('error');
+        const msg = formatApiReachabilityError(e);
+        setScanLine1((line) => (line === 'Scanning…' ? "Can't reach medication lookup" : line));
+        setScanLine2((line) => (line === '' ? apiHostLabel() : line));
+        setScanLine3((line) =>
+          line === SCAN_HINT || line === 'Loading NHS dm+d database…' ? msg : line,
+        );
       });
-    const reader = new BrowserMultiFormatReader();
+    const reader = new BrowserMultiFormatReader(PACK_CODE_HINTS);
     readerRef.current = reader;
     let cancelled = false;
 
     (async () => {
       try {
         const stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: 'environment' },
+          video: {
+            facingMode: { ideal: cameraFacing },
+            width: { ideal: 1280 },
+            height: { ideal: 720 },
+          },
         });
-        if (cancelled || !videoRef.current) return;
-        videoRef.current.srcObject = stream;
-        await videoRef.current.play();
-        reader.decodeFromVideoDevice(null, 'add-scan-video', (result) => {
-          if (result && !scanLock.current) void applyLookup(result.getText());
+        if (cancelled || !videoRef.current) {
+          stream.getTracks().forEach((t) => t.stop());
+          return;
+        }
+        streamRef.current = stream;
+        // Hand the raw stream to ZXing instead of setting srcObject and calling play()
+        // ourselves. decodeFromStream waits on the video's `playing` event before it
+        // starts the decode loop, and that event does not fire again for a video that is
+        // already playing — so pre-playing left the loop parked behind a promise that
+        // never settled and the scanner sat on "Scanning…" indefinitely.
+        void reader.decodeFromStream(stream, videoRef.current, (result) => {
+          if (!result || scanLock.current || modeRef.current !== 'scan') return;
+          void applyLookupRef.current(result.getText());
         });
+        try {
+          const devices = await navigator.mediaDevices.enumerateDevices();
+          setMultiCamera(devices.filter((d) => d.kind === 'videoinput').length > 1);
+        } catch {
+          setMultiCamera(false);
+        }
       } catch {
         setScanLine1('Camera unavailable');
         setScanLine2('Use manual GTIN entry');
@@ -237,14 +371,9 @@ export function Add() {
 
     return () => {
       cancelled = true;
-      readerRef.current?.reset();
-      readerRef.current = null;
-      const v = videoRef.current;
-      const stream = v?.srcObject as MediaStream | null;
-      stream?.getTracks().forEach((t) => t.stop());
-      if (v) v.srcObject = null;
+      stopScanStream();
     };
-  }, [mode, applyLookup]);
+  }, [mode, cameraFacing, stopScanStream]);
 
   const isManualLike = mode === 'manual' || mode === 'filled';
   const canSave = name.trim().length > 0;
@@ -290,78 +419,156 @@ export function Add() {
   };
 
   const onSave = async () => {
-    if (!canSave) return;
+    if (!canSave || saveChecking) return;
     const med = buildMed();
-    if (editing) {
-      store.updateMedication(med);
+    const others = state.medications.filter((m) => m.id !== med.id && m.status === 'active');
+    if (!others.length) {
+      if (editing) store.updateMedication(med);
+      else store.addMedication(med);
       nav('/home');
       return;
     }
-    const found = await interactionsForAsync(med, state.medications);
-    if (found.length) {
-      const interaction = found[0];
-      const otherName = interaction.a.toLowerCase() === med.name.toLowerCase() ? interaction.b : interaction.a;
-      const existing = state.medications.find(
-        (m) => m.name.toLowerCase() === otherName.toLowerCase() && m.status === 'active',
-      );
-      setWarn({ newMed: med, existing, interaction });
-    } else {
-      store.addMedication(med);
-      nav('/home');
+    setSaveChecking(true);
+    setSaveError(null);
+    try {
+      const found = await interactionsForAsync(med, state.medications);
+      if (found.length) {
+        const interaction = found[0];
+        const otherName = interaction.a.toLowerCase() === med.name.toLowerCase() ? interaction.b : interaction.a;
+        const existing = state.medications.find(
+          (m) => m.name.toLowerCase() === otherName.toLowerCase() && m.status === 'active',
+        );
+        setClearCheck(null);
+        setWarn({
+          newMed: med,
+          existing,
+          interaction,
+          isEdit: editing,
+          extraCount: Math.max(0, found.length - 1),
+        });
+      } else {
+        setWarn(null);
+        const activeCount = state.medications.filter((m) => m.status === 'active').length;
+        const cabinetCount = editing ? activeCount : activeCount + 1;
+        setClearCheck({ med, isEdit: editing, cabinetCount });
+      }
+    } catch (e) {
+      if (e instanceof InteractionCheckIncompleteError) {
+        setSaveError(e.reason);
+      } else {
+        setSaveError(formatApiReachabilityError(e));
+      }
+    } finally {
+      setSaveChecking(false);
     }
   };
 
   const goManual = () => setMode(scanned ? 'filled' : 'manual');
   const screenTitle = editing ? 'Edit medication' : 'Add medication';
 
+  const persistWarnMed = (data: WarnData) => {
+    if (data.isEdit) store.updateMedication(data.newMed);
+    else store.addMedication(data.newMed);
+  };
+
+  if (warn) {
+    return (
+      <AddInteractionResult
+        newMed={warn.newMed}
+        existing={warn.existing}
+        interaction={warn.interaction}
+        extraCount={warn.extraCount}
+        onBack={() => setWarn(null)}
+        onReadMore={() => {
+          persistWarnMed(warn);
+          setWarn(null);
+          nav(`/interactions/${warn.interaction.id}`);
+        }}
+        onAddAnyway={() => {
+          persistWarnMed(warn);
+          setWarn(null);
+          nav('/home');
+        }}
+        onViewAll={
+          warn.extraCount && warn.extraCount > 0
+            ? () => {
+                persistWarnMed(warn);
+                setWarn(null);
+                nav('/interactions');
+              }
+            : undefined
+        }
+      />
+    );
+  }
+
   // ---------------- SCAN (dark camera takeover) ----------------
   if (mode === 'scan') {
     return (
       <PhoneFrame label="Scan medication barcode">
         <div className="add-scan">
+          <video
+            ref={videoRef}
+            id="add-scan-video"
+            className="add-scan-video"
+            playsInline
+            muted
+          />
           <div className="add-vignette" />
           <StatusBar dark />
           <div className="add-scan-top">
             <button className="add-scan-btn" aria-label="Close scanner" onClick={() => setMode('camera')}>
               <Icon name="close" size={20} strokeWidth={2} />
             </button>
-            <span className="title">Scan barcode</span>
-            <button className="add-scan-btn" aria-label="Toggle flash">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M13 2L3 14h7l-1 8 10-12h-7l1-8z" /></svg>
-            </button>
+            <div className="add-scan-title-wrap">
+              <span className="title">Scan barcode</span>
+              <span className="add-scan-facing" aria-live="polite">
+                {cameraFacing === 'environment' ? 'Rear' : 'Front'}
+              </span>
+            </div>
+            <div className="add-scan-actions">
+              {multiCamera ? (
+                <button type="button" className="add-scan-btn" aria-label="Switch camera" onClick={flipCamera}>
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                    <path d="M11 19H4a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h3" />
+                    <path d="m8 7 3-3 3 3" />
+                    <path d="M13 5h7a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2h-3" />
+                    <path d="m16 17-3 3-3-3" />
+                  </svg>
+                </button>
+              ) : null}
+              <button
+                type="button"
+                className={`add-scan-btn${torchOn ? ' on' : ''}`}
+                aria-label={torchOn ? 'Turn flash off' : 'Turn flash on'}
+                aria-pressed={torchOn}
+                onClick={() => void toggleTorch()}
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M13 2L3 14h7l-1 8 10-12h-7l1-8z" /></svg>
+              </button>
+            </div>
           </div>
 
           <div className="add-reticle-wrap">
-            <video
-              ref={videoRef}
-              id="add-scan-video"
-              playsInline
-              muted
-              style={{
-                position: 'absolute',
-                inset: 0,
-                width: '100%',
-                height: '100%',
-                objectFit: 'cover',
-                zIndex: 0,
-                opacity: 0.35,
-              }}
-            />
-            <div className="add-reticle">
+            <div className={`add-reticle${scanLine1 === 'Match found' ? ' matched' : ''}`}>
               <div className="add-corner tl" /><div className="add-corner tr" />
               <div className="add-corner bl" /><div className="add-corner br" />
+              {/* Expanding ring on a dm+d hit — the moment the scan pays off. */}
+              <span className="add-ring" aria-hidden />
             </div>
-            <div className="add-scan-hint">Align the barcode within the frame</div>
+            <div className="add-scan-hint">{SCAN_HINT}</div>
           </div>
 
-          <div className="add-match">
-            <div className="dot"><Icon name="capsule" size={24} strokeWidth={1.7} /></div>
+          <div className={`add-match${apiScanStatus === 'error' ? ' add-match-warn' : ''}`}>
+            <div className="dot"><Icon name="capsule" size={24} strokeWidth={1.6} /></div>
             <div className="mtext">
               <div className="mt1">{scanLine1}</div>
               <div className="mt2">{scanLine2 || ''}</div>
               <div className="mt3">{scanLine3}</div>
             </div>
-            <svg className="add-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round"><path d="M12 3a9 9 0 1 0 9 9" opacity=".9" /></svg>
+            {scanLine1 === 'Scanning…' || scanLine1 === 'Looking up…' ? (
+              <svg className="add-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" aria-hidden><path d="M12 3a9 9 0 1 0 9 9" opacity=".9" /></svg>
+            ) : null}
           </div>
           <div className="add-scan-ind" />
         </div>
@@ -385,7 +592,11 @@ export function Add() {
 
       {!editing && (
         <div className="segwrap">
-          <div className="segment" role="tablist">
+          <div
+            className="segment"
+            role="tablist"
+            style={{ '--seg-i': isManualLike ? 0 : 1, '--seg-n': 2 } as CSSProperties}
+          >
             <button role="tab" aria-selected={isManualLike} onClick={goManual}>
               <Icon name="edit" size={17} /> Manual
             </button>
@@ -400,7 +611,7 @@ export function Add() {
         <>
           <div className="screen-body">
             <div className="add-camreq">
-              <div className="add-halo"><Icon name="camera" size={52} strokeWidth={1.5} /></div>
+              <div className="add-halo"><Icon name="camera" size={52} strokeWidth={1.6} /></div>
               <h2>Scan your medication</h2>
               <p>Point your camera at the barcode on the packaging. We’ll match it to a known database and fill in the details for you.</p>
               <div className="add-privacy">
@@ -410,14 +621,9 @@ export function Add() {
             </div>
           </div>
           <div className="add-footer">
-            <button className="add-cta" onClick={async () => {
-              try {
-                await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
-                setMode('scan');
-              } catch {
-                setLookupErr('Camera access denied. Use manual barcode entry on the Manual tab.');
-                setMode('manual');
-              }
+            <button className="add-cta" onClick={() => {
+              setCameraFacing('environment');
+              setMode('scan');
             }}>Request camera access</button>
           </div>
         </>
@@ -433,7 +639,7 @@ export function Add() {
 
             <div className="add-name-row">
               <div className={`add-photo filled`} title={rows[0]?.route}>
-                <Icon name={iconForRoute(rows[0]?.route)} size={30} strokeWidth={1.7} />
+                <Icon name={iconForRoute(rows[0]?.route)} size={30} strokeWidth={1.6} />
               </div>
               <TextField
                 label="Medication name"
@@ -475,7 +681,7 @@ export function Add() {
                     <div className="add-regrow-head">
                       <span>Dose {i + 1}</span>
                       <button type="button" className="add-removerow" onClick={() => removeRow(i)}>
-                        <Icon name="close" size={13} strokeWidth={2.4} /> Remove
+                        <Icon name="close" size={13} strokeWidth={2} /> Remove
                       </button>
                     </div>
                   )}
@@ -501,7 +707,7 @@ export function Add() {
               ))}
 
               <button type="button" className="add-addrow" onClick={addRow}>
-                <Icon name="plus" size={15} strokeWidth={2.1} /> Add another dose
+                <Icon name="plus" size={15} strokeWidth={2} /> Add another dose
               </button>
             </div>
 
@@ -534,8 +740,20 @@ export function Add() {
           </div>
 
           <div className="add-footer">
-            <button className={`add-cta${canSave ? '' : ' disabled'}`} onClick={onSave}>
-              {editing ? 'Save changes' : 'Save medication'}
+            {saveError && (
+              <div className="add-save-err" role="alert">
+                <Icon name="warning" size={18} strokeWidth={2} />
+                <div>
+                  <strong>Could not verify interactions</strong>
+                  <p>{saveError}</p>
+                </div>
+              </div>
+            )}
+            <button
+              className={`add-cta${canSave && !saveChecking ? '' : ' disabled'}`}
+              onClick={() => void onSave()}
+            >
+              {saveChecking ? 'Checking interactions…' : editing ? 'Save changes' : 'Save medication'}
             </button>
           </div>
         </>
@@ -567,16 +785,21 @@ export function Add() {
         </Sheet>
       )}
 
-      {warn && (
-        <Warning
-          newMed={warn.newMed}
-          existing={warn.existing}
-          interaction={warn.interaction}
-          onClose={() => setWarn(null)}
-          onAddAndReview={() => { store.addMedication(warn.newMed); nav('/interactions'); }}
-          onAddAnyway={() => { store.addMedication(warn.newMed); nav('/home'); }}
+      {clearCheck && (
+        <AddClearCheck
+          med={clearCheck.med}
+          cabinetCount={clearCheck.cabinetCount}
+          isEdit={clearCheck.isEdit}
+          onClose={() => setClearCheck(null)}
+          onConfirm={() => {
+            if (clearCheck.isEdit) store.updateMedication(clearCheck.med);
+            else store.addMedication(clearCheck.med);
+            setClearCheck(null);
+            nav('/home');
+          }}
         />
       )}
+
     </PhoneFrame>
   );
 }

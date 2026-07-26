@@ -2,6 +2,27 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
 
+function assertProductionApiBaseUrl(): void {
+  if (process.env.VERCEL !== '1') return
+  const api = (process.env.VITE_API_BASE_URL ?? '').trim().replace(/\/$/, '')
+  if (!api) {
+    throw new Error(
+      'VITE_API_BASE_URL must be set in Vercel → Settings → Environment Variables before deploy (HTTPS API URL, not localhost).',
+    )
+  }
+  if (/localhost|127\.0\.0\.1/i.test(api)) {
+    throw new Error(
+      `VITE_API_BASE_URL is "${api}" — Vercel builds cannot call localhost. Use an HTTPS tunnel or hosted API URL.`,
+    )
+  }
+}
+
+assertProductionApiBaseUrl()
+
+const APP_NAME = 'Pocketary'
+const APP_DESCRIPTION =
+  'Every medication you take, in one pocket. Track your NHS, private and over-the-counter medicines, spot potential interactions, and share a clear summary with your GP.'
+
 // https://vite.dev/config/
 export default defineConfig({
   server: {
@@ -16,10 +37,13 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.svg', 'icon.svg'],
       manifest: {
-        name: 'Pharmacy in Your Pocket',
-        short_name: 'Pharmacy',
-        description: 'Every medication you take, in one pocket. Track your NHS, private and over-the-counter medicines, spot potential interactions, and share a clear summary with your GP.',
-        theme_color: '#12A594',
+        name: APP_NAME,
+        short_name: APP_NAME,
+        description: APP_DESCRIPTION,
+        // Matches background_color and the <meta name="theme-color"> in
+        // index.html. These three used to disagree, so an installed PWA showed
+        // a teal splash opening into a cream app.
+        theme_color: '#F7F7F4',
         background_color: '#F7F7F4',
         display: 'standalone',
         orientation: 'portrait',
@@ -33,6 +57,10 @@ export default defineConfig({
       workbox: {
         globPatterns: ['**/*.{js,css,html,svg,png,woff2}'],
         navigateFallback: '/index.html',
+        // /gp/ is denied so GP share links always resolve over the network. Served from
+        // precache they render whatever bundle the phone last cached, and a bundle that
+        // predates the /gp/ route degrades to the landing page instead of failing loudly.
+        navigateFallbackDenylist: [/\.[^/]+$/, /^\/assets\//, /^\/gp\//],
       },
       devOptions: { enabled: false },
     }),

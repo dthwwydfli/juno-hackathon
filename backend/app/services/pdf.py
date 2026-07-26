@@ -152,7 +152,7 @@ def _render_summary_pdf(
     # Header
     c.setFont("Helvetica-Bold", 10)
     c.setFillColor(TEAL)
-    c.drawString(m, y, "PHARMACY IN YOUR POCKET")
+    c.drawString(m, y, "POCKETARY")
     c.setFillColor(MUTED)
     c.drawRightString(w - m, y, "MEDICATION SUMMARY")
     y -= 26

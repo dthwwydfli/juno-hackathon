@@ -1,6 +1,7 @@
+/* Square by default — inside a .list-group the container owns the radius and
+   does the clipping, so a radius here would cut a notch out of every row. */
 .swipe-wrap {
   position: relative;
-  border-radius: 18px;
   overflow: hidden;
 }
 .swipe-action {
@@ -18,12 +19,12 @@
   font-weight: 700;
   cursor: pointer;
 }
+/* No CSS transition on transform here — Motion writes the transform inline and
+   a transition would fight it, lagging every frame of the drag. `pan-y` is what
+   lets the browser keep ownership of vertical scrolling on touch. */
 .swipe-front {
   position: relative;
   z-index: 1;
   touch-action: pan-y;
   will-change: transform;
-}
-.swipe-front:not(.dragging) {
-  transition: transform .22s cubic-bezier(.2,.8,.2,1);
 }

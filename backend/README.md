@@ -30,6 +30,7 @@ See [`.env.example`](.env.example).
 |----------|---------|
 | `DMD_DB_PATH` | dm+d SQLite (from TRUD ingest or sample builder) |
 | `APP_DB_PATH` | Application SQLite |
+| `APP_DATABASE_URL` | Optional Supabase Postgres (transaction pooler). Empty = use `APP_DB_PATH` SQLite |
 | `TRUD_API_KEY` / `TRUD_DMD_ITEM_ID` | Automated dm+d download |
 | `OPENFDA_API_KEY` | Optional higher rate limits for FDA label excerpts |
 | `MEDDATA_API_KEY` | [MedData](https://meddata.anthesia.io) interaction checks (`X-API-Key` header). Free tier: `POST /api/v1/signup` with email |
@@ -132,11 +133,49 @@ curl -s -X POST http://localhost:8000/interactions/check \
   -d '{}' | jq
 ```
 
+**Interaction check troubleshooting**
+
+1. `GET http://localhost:8000/health` — expect `meddata_configured: true`.
+2. If `sources_status.meddata` is `unavailable` and `meddata_detail` is `403 Forbidden`, rotate or fix `MEDDATA_API_KEY` in `.env` (free signup: MedData docs).
+3. After a 403 or quota hit, MedData calls are blocked for several hours. Clear the cooldown locally:
+
+```bash
+cd backend && source .venv/bin/activate
+python scripts/clear_meddata_block.py
+```
+
+Then restart uvicorn and retry the curl check above.
+
 **Interaction detail**
 
 ```bash
 curl -s http://localhost:8000/interactions/1 -H "X-User-Id: demo" | jq
 ```
+
+## Supabase (app Postgres, frontend unchanged)
+
+FastAPI stores app data in **Supabase Postgres** when `APP_DATABASE_URL` is set; otherwise **`data/app.sqlite`**. The Vite app still uses localStorage + REST; no Supabase client in the frontend.
+
+1. Apply migrations: see [`../supabase/README.md`](../supabase/README.md).
+2. Set `APP_DATABASE_URL` in `.env` (pooler URI from Supabase dashboard).
+3. Seed demo cabinet: `python scripts/seed_demo_cabinet.py`
+4. Check: `curl -s http://localhost:8000/health | jq '.app_db_backend, .app_db_ok'`
+
+Demo medicines for `X-User-Id: demo` come from [`app/services/demo_seed.py`](app/services/demo_seed.py). Frontend fixture data in `frontend/src/data/fixtures.ts` is separate and unchanged.
+
+## Cloud API (Python PaaS)
+
+Supabase hosts **Postgres only**, not uvicorn. For an always-on API, deploy **Python** to Render, Fly.io, Railway, or Cloud Run using the included container:
+
+```bash
+cd backend
+docker build -t juno-meds-api .
+docker run --rm -p 8000:8000 -e CORS_ORIGINS=https://your-app.vercel.app juno-meds-api
+```
+
+On [Render](https://render.com), set **Root Directory** to `backend` and use [`render.yaml`](render.yaml), or connect the Dockerfile directly. Set `PUBLIC_BASE_URL`, `CORS_ORIGINS`, `MEDDATA_API_KEY`, and optionally `APP_DATABASE_URL` in the service env.
+
+See [`../docs/hosting-and-data.md`](../docs/hosting-and-data.md) for hackathon vs cloud paths and when Supabase Postgres/Auth might be added later.
 
 ## Tests
 
@@ -148,6 +187,7 @@ pytest
 
 - Send `X-User-Id` on cabinet, interaction, and GP routes.
 - CORS origins configured via `CORS_ORIGINS` (includes `http://localhost:5173`).
+- **Vercel + phone barcode scan:** [`../docs/deploy-vercel-phone-scan.md`](../docs/deploy-vercel-phone-scan.md) — bind API with `./scripts/run_lan_api.sh` or uvicorn `--host 0.0.0.0`.
 - Product PRD: [`../plan.md`](../plan.md).
 - Wiring contract: [`../first.md`](../first.md).
 - Vite app: [`../frontend/`](../frontend/).

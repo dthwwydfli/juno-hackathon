@@ -25,6 +25,8 @@ def test_health():
     assert r.status_code == 200
     body = r.json()
     assert body["status"] == "ok"
+    assert body.get("app_db_backend") == "sqlite"
+    assert body.get("app_db_ok") is True
     assert "dmd_gtin_count" in body
     assert "dmd_ready" in body
     assert "trud_configured" in body
@@ -211,9 +213,10 @@ def test_gp_share_pdf_and_token_errors():
     bad = client.get("/gp/summary/invalid-token-xyz.pdf")
     assert bad.status_code == 404
 
-    from datetime import datetime, timedelta
+    from datetime import timedelta
 
     from app.db.models import GpShareToken, SessionLocal
+    from app.time_util import utc_now
 
     db = SessionLocal()
     try:
@@ -224,7 +227,7 @@ def test_gp_share_pdf_and_token_errors():
                 token=expired_token,
                 user_id=uid,
                 patient_label=None,
-                expires_at=datetime.utcnow() - timedelta(hours=1),
+                expires_at=utc_now() - timedelta(hours=1),
             )
         )
         db.commit()

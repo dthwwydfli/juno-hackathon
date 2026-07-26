@@ -1,22 +1,25 @@
 /* Home screen — segmented filter + medication list. Reuses shared
    .segwrap/.segment/.med from components.css; only screen-specific bits here. */
 
+/* The section label used to sit at a 24px inset over cards at 16px, so the
+   list read as slightly misaligned with its own heading. Everything on this
+   screen now shares --gutter. */
 .home-listbar {
   flex: 0 0 auto;
-  padding: 16px 24px 8px;
+  padding: 14px var(--gutter) 8px;
   display: flex;
   align-items: center;
   justify-content: space-between;
 }
 .home-listbar .label {
-  font-size: 13px;
+  font-size: var(--fs-micro);
   font-weight: 700;
-  letter-spacing: .06em;
+  letter-spacing: var(--lsp-micro);
   text-transform: uppercase;
   color: var(--faint);
 }
 .home-hint {
-  font-size: 11.5px;
+  font-size: var(--fs-micro);
   font-weight: 600;
   color: var(--faint);
   margin-left: 10px;
@@ -26,29 +29,120 @@
   align-items: center;
   gap: 5px;
   margin-left: auto;
-  font-size: 13px;
+  font-size: var(--fs-footnote);
   font-weight: 600;
   color: var(--accent-ink);
   background: none;
   border: 0;
+  padding: 4px 6px;
+  margin-right: -6px;
+  border-radius: var(--r-xs);
 }
-.home-archive:active { opacity: .6; }
+.home-archive:hover { background: var(--accent-tint); }
+.home-archive:active { transform: scale(.96); }
 
 .home-list {
   display: flex;
   flex-direction: column;
   gap: 10px;
-  padding: 2px 16px 120px;
+  padding: 2px var(--gutter) 120px;
 }
 
-/* Scoped fix: MedCard renders name/brand/dose as inline <span>s, so without
-   an explicit block context they run together. Foundation issue reported;
-   this override keeps Home faithful to the reference without editing shared code. */
-.home-list .med .body { display: flex; flex-direction: column; }
+/* ---------- Next dose ----------
+   Deliberately not a card: no border, no shadow, no surface. It sits directly
+   on the app background so it reads as part of the page's voice rather than
+   another tile in a grid of tiles. */
+.home-next {
+  flex: 0 0 auto;
+  margin: 0 var(--gutter) 14px;
+  padding: 12px 14px 13px;
+  border-radius: var(--r-md);
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--accent-tint) 70%, var(--surface)),
+    var(--accent-tint)
+  );
+}
+.home-next-label {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  font-size: var(--fs-micro);
+  font-weight: 700;
+  letter-spacing: var(--lsp-micro);
+  text-transform: uppercase;
+  color: var(--accent-ink);
+  opacity: .75;
+}
+.home-next-when {
+  text-transform: none;
+  letter-spacing: 0;
+  font-size: var(--fs-footnote);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  opacity: .9;
+}
+.home-next-body {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  margin-top: 9px;
+}
+.home-next-text { display: flex; flex-direction: column; min-width: 0; }
+.home-next-name {
+  font-size: var(--fs-subhead);
+  font-weight: 650;
+  letter-spacing: var(--lsp-tight);
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.home-next-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--fs-footnote);
+  color: var(--accent-ink);
+  margin-top: 1px;
+}
+.home-next-meta .dot {
+  width: 3px; height: 3px; border-radius: 50%;
+  background: currentColor;
+  opacity: .5;
+}
 
-.home-empty {
-  text-align: center;
-  color: var(--faint);
-  font-size: 14px;
-  padding: 40px 20px;
+.home-ix-banner.home-ix-loading {
+  background: var(--surface-2, #f4f4f5);
+  color: var(--ink-secondary, #52525b);
+  align-items: center;
+}
+.home-ix-loading .spin {
+  animation: home-ix-spin 0.9s linear infinite;
+  flex-shrink: 0;
+}
+@keyframes home-ix-spin {
+  to { transform: rotate(360deg); }
+}
+.home-ix-banner {
+  margin: 0 var(--gutter) 10px;
+  padding: 12px 14px;
+  border-radius: var(--r-md);
+  background: var(--amber-tint);
+  color: var(--amber-ink);
+  font-size: var(--fs-footnote);
+  font-weight: 600;
+  line-height: 1.45;
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+}
+.home-ix-banner button {
+  margin-top: 8px;
+  font-size: var(--fs-footnote);
+  font-weight: 700;
+  color: var(--accent-ink);
+  background: none;
+  border: 0;
+  padding: 0;
 }

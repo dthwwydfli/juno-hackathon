@@ -38,6 +38,8 @@ export interface InteractionEffect {
 
 export interface Interaction {
   id: string;                 // stable id for the pair, e.g. "ramipril-ibuprofen"
+  /** Server interaction row — detail page fetches full text when present. */
+  backendId?: number;
   a: string;                  // medication name A
   b: string;                  // medication name B
   aCategory: Category;

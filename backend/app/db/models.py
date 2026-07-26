@@ -26,12 +26,44 @@ class Medication(Base):
     dmd_code: Mapped[str | None] = mapped_column(String(64), nullable=True)
     dmd_code_type: Mapped[str | None] = mapped_column(String(32), nullable=True)
     gtin: Mapped[str | None] = mapped_column(String(32), nullable=True)
-    category: Mapped[MedCategory] = mapped_column(Enum(MedCategory))
+    category: Mapped[MedCategory] = mapped_column(
+        Enum(MedCategory, native_enum=False, length=32)
+    )
     dosage: Mapped[str] = mapped_column(String(256))
     schedule: Mapped[str] = mapped_column(Text, default="{}")
     started_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     archived_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+
+def app_db_backend() -> str:
+    return "postgres" if settings.uses_postgres_app_db else "sqlite"
+
+
+def _make_app_engine():
+    if settings.uses_postgres_app_db:
+        return create_engine(settings.app_database_url.strip(), pool_pre_ping=True)
+    return create_engine(
+        f"sqlite:///{settings.app_db_path}",
+        connect_args={"check_same_thread": False},
+    )
+
+
+engine = _make_app_engine()
+SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False)
+
+
+def app_db_ok() -> bool:
+    from sqlalchemy import text
+
+    if not settings.uses_postgres_app_db:
+        return settings.app_db_path.is_file()
+    try:
+        with SessionLocal() as db:
+            db.execute(text("SELECT 1"))
+        return True
+    except Exception:
+        return False
 
 
 class InteractionRecord(Base):
@@ -94,14 +126,10 @@ class GpShareToken(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
 
-engine = create_engine(
-    f"sqlite:///{settings.app_db_path}",
-    connect_args={"check_same_thread": False},
-)
-SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False)
-
-
 def init_app_db() -> None:
+    if settings.uses_postgres_app_db:
+        dedupe_medications()
+        return
     settings.app_db_path.parent.mkdir(parents=True, exist_ok=True)
     Base.metadata.create_all(bind=engine)
     _ensure_gp_share_snapshot_column()

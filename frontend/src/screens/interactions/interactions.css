@@ -3,10 +3,10 @@
 
 .ix-label {
   flex: 0 0 auto;
-  padding: 16px 24px 8px;
-  font-size: 12px;
+  padding: 14px var(--gutter) 8px;
+  font-size: var(--fs-micro);
   font-weight: 700;
-  letter-spacing: .07em;
+  letter-spacing: var(--lsp-micro);
   text-transform: uppercase;
   color: var(--faint);
   display: flex;
@@ -14,72 +14,82 @@
   justify-content: space-between;
 }
 .ix-label .lcount {
-  font-size: 11px;
-  letter-spacing: .03em;
+  font-size: var(--fs-micro);
+  letter-spacing: .02em;
   text-transform: none;
   background: var(--amber-tint);
   color: var(--amber-ink);
   padding: 3px 9px;
-  border-radius: 20px;
+  border-radius: var(--r-pill);
+  font-variant-numeric: tabular-nums;
+  /* Ticks over when a check completes, so a changed number is noticed. */
+  animation: count-tick var(--dur-slow) var(--ease-spring);
 }
 
 .ix-list {
   display: flex;
   flex-direction: column;
   gap: 12px;
-  padding: 2px 18px 24px;
+  padding: 2px var(--gutter) 24px;
 }
 
+/* The card used to carry a full amber border at 38% mix, which put the same
+   weight on the container as on the warning glyph inside it. A hairline plus
+   the tinted header row says "amber" once. Still a single ungraded level. */
 .ix-card {
   background: var(--surface);
-  border: 1px solid color-mix(in srgb, var(--amber) 38%, var(--hairline));
+  border: 1px solid var(--hairline);
   border-radius: 18px;
   overflow: hidden;
-  box-shadow: var(--shadow);
+  box-shadow: var(--elev-1);
 }
 .ix-card .pad { padding: 14px 15px; }
 
-.ix-sevrow { display: flex; align-items: center; gap: 9px; margin-bottom: 12px; }
+.ix-sevrow {
+  display: flex; align-items: center; gap: 9px;
+  margin: -14px -15px 12px;
+  padding: 11px 15px;
+  background: var(--amber-tint);
+}
 .ix-tri {
   width: 26px; height: 26px;
-  border-radius: 7px;
-  background: var(--amber-tint);
+  border-radius: var(--r-xs);
+  background: var(--surface);
   color: var(--amber);
   display: flex; align-items: center; justify-content: center;
   flex: 0 0 auto;
 }
-.ix-sevchip { font-size: 13px; font-weight: 650; color: var(--text); }
+.ix-sevchip { font-size: var(--fs-footnote); font-weight: 650; color: var(--amber-ink); }
 .ix-tag {
   margin-left: auto;
-  font-size: 11px; font-weight: 600;
-  color: var(--faint);
-  background: var(--surface-sunk);
+  font-size: var(--fs-micro); font-weight: 600;
+  color: var(--amber-ink);
+  background: color-mix(in srgb, var(--amber) 12%, transparent);
   padding: 3px 8px;
-  border-radius: 20px;
+  border-radius: var(--r-pill);
 }
 
 .ix-pair { display: flex; align-items: center; gap: 8px; }
 .ix-pill {
-  flex: 1; min-width: 0;
-  display: flex; align-items: center; gap: 9px;
+  flex: 1 1 0; min-width: 0;
+  display: flex; align-items: center; gap: 8px;
   background: var(--surface-sunk);
-  border-radius: 12px;
+  border-radius: var(--r-sm);
   padding: 9px 10px;
 }
 .ix-ic {
-  width: 32px; height: 32px;
-  border-radius: 9px;
-  background: var(--surface);
-  color: var(--muted);
+  width: 28px; height: 28px;
   display: flex; align-items: center; justify-content: center;
   flex: 0 0 auto;
 }
 .ix-pcol { display: flex; flex-direction: column; min-width: 0; }
-.ix-pn { font-size: 14px; font-weight: 650; line-height: 1.15; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.ix-pt { font-size: 11px; color: var(--faint); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* Lexend sets wider than the old system stack, so drug names were clipping at
+   14px inside a half-width pill. */
+.ix-pn { font-size: var(--fs-footnote); font-weight: 650; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; letter-spacing: var(--lsp-tight); }
+.ix-pt { font-size: var(--fs-micro); color: var(--faint); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .ix-swap { flex: 0 0 auto; color: var(--muted); display: flex; }
 
-.ix-reason { font-size: 13.5px; line-height: 1.5; color: var(--muted); margin-top: 12px; }
+.ix-reason { font-size: var(--fs-footnote); line-height: 1.55; color: var(--muted); margin-top: 12px; }
 
 .ix-readmore {
   width: 100%;
@@ -88,9 +98,10 @@
   background: transparent;
   padding: 12px 15px;
   display: flex; align-items: center; justify-content: space-between;
-  font-size: 14px; font-weight: 600;
+  font-size: var(--fs-callout); font-weight: 600;
   color: var(--accent-ink);
 }
+.ix-readmore:hover { background: var(--accent-tint); }
 .ix-readmore:active { background: var(--surface-sunk); }
 .ix-readmore .r { display: flex; align-items: center; gap: 8px; }
 
@@ -98,42 +109,69 @@
 .ix-clear {
   display: flex; align-items: center; gap: 12px;
   background: var(--accent-tint);
-  border: 1px solid color-mix(in srgb, var(--accent) 30%, var(--hairline));
-  border-radius: 16px;
+  border: 1px solid var(--hairline);
+  border-radius: var(--r-md);
   padding: 15px;
 }
 .ix-clear .ci {
   width: 34px; height: 34px;
-  border-radius: 10px;
+  border-radius: var(--r-sm);
   background: var(--surface);
-  color: var(--accent);
+  color: var(--accent-ink);
   display: flex; align-items: center; justify-content: center;
   flex: 0 0 auto;
-  box-shadow: var(--shadow);
+  box-shadow: var(--elev-1);
 }
-.ix-clear .c1 { font-size: 14px; font-weight: 650; color: var(--accent-ink); }
-.ix-clear .c2 { font-size: 12.5px; color: var(--muted); margin-top: 1px; }
+.ix-clear .c1 { font-size: var(--fs-callout); font-weight: 650; color: var(--accent-ink); }
+.ix-clear .c2 { font-size: var(--fs-caption); color: var(--muted); margin-top: 1px; line-height: 1.4; }
 
-/* GP note banner — teal, sits above the 96px bottom nav */
+/* Replaces the old inline marginTop style on the retry button. */
+.ix-retry {
+  margin-top: 10px;
+  border: 1px solid var(--hairline);
+  background: var(--surface);
+  border-radius: var(--r-xs);
+  padding: 7px 14px;
+  font-size: var(--fs-footnote);
+  font-weight: 650;
+  color: var(--accent-ink);
+}
+.ix-retry:hover { background: var(--surface-sunk); }
+.ix-retry:active { transform: scale(.96); }
+
+/* Loading placeholders, so a check in flight has the shape of the result. */
+.ix-skel {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+  border-radius: 18px;
+  padding: 15px;
+  box-shadow: var(--elev-1);
+}
+
+/* GP note banner — teal, sits above the 96px bottom nav.
+   This block was byte-identical to .rm-gp in readmore.css. */
 .ix-gp {
   flex: 0 0 auto;
   margin: 0 0 96px;
-  padding: 13px 20px;
+  padding: 13px var(--gutter);
   display: flex; align-items: center; gap: 11px;
   background: var(--accent-tint);
-  border-top: 1px solid color-mix(in srgb, var(--accent) 22%, var(--hairline));
+  border-top: 1px solid var(--hairline);
 }
 .ix-gp .gi {
   width: 32px; height: 32px;
   border-radius: 50%;
   background: var(--surface);
-  color: var(--accent);
+  color: var(--accent-ink);
   display: flex; align-items: center; justify-content: center;
   flex: 0 0 auto;
-  box-shadow: var(--shadow);
+  box-shadow: var(--elev-1);
 }
-.ix-gp .gt { font-size: 13.5px; font-weight: 600; color: var(--accent-ink); line-height: 1.35; }
-.ix-gp .gt small { display: block; font-weight: 500; color: var(--muted); font-size: 12px; margin-top: 1px; }
+.ix-gp .gt { font-size: var(--fs-footnote); font-weight: 600; color: var(--accent-ink); line-height: 1.35; }
+.ix-gp .gt small { display: block; font-weight: 450; color: var(--muted); font-size: var(--fs-caption); margin-top: 1px; }
 
 /* Shown when results came back but a source failed, so a partial list is never
    mistaken for a complete one. */

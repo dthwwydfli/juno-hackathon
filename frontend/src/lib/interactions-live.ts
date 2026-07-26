@@ -9,8 +9,9 @@ export interface LiveCheckOptions {
 /** Per-provider outcome, so an outage never renders as "no interactions found". */
 export interface SourcesStatus {
   meddata?: 'ok' | 'quota_exceeded' | 'unavailable' | 'not_configured';
-  suppai?: 'ok' | 'skipped' | 'unavailable';
+  suppai?: 'ok' | 'skipped' | 'unavailable' | 'partial';
   meddata_detail?: string;
+  suppai_agent_failures?: string;
 }
 
 export interface LiveCheckResult {
@@ -23,14 +24,26 @@ export type LiveRefreshState = 'idle' | 'loading' | 'ready' | 'error';
 /** Human-readable reason a check came back incomplete, or null when all sources answered. */
 export function describeSourceProblem(sources: SourcesStatus): string | null {
   const meddata = sources.meddata;
-  if (!meddata || meddata === 'ok') return null;
-  if (meddata === 'quota_exceeded') {
-    return sources.meddata_detail || 'The MedData request limit has been reached.';
+  if (meddata && meddata !== 'ok') {
+    if (meddata === 'quota_exceeded') {
+      return sources.meddata_detail || 'The MedData request limit has been reached.';
+    }
+    if (meddata === 'not_configured') {
+      return 'MedData is not configured on the server (MEDDATA_API_KEY is not set).';
+    }
+    return sources.meddata_detail || 'The MedData service could not be reached.';
   }
-  if (meddata === 'not_configured') {
-    return 'MedData is not configured on the server (MEDDATA_API_KEY is not set).';
+  if (sources.suppai === 'partial') {
+    const n = sources.suppai_agent_failures;
+    if (n && n !== '0') {
+      return `Some supplement interaction lookups did not complete (${n} failed). Try again in a moment.`;
+    }
+    return 'Some supplement interaction checks could not complete. Try again in a moment.';
   }
-  return sources.meddata_detail || 'The MedData service could not be reached.';
+  if (sources.suppai === 'unavailable') {
+    return 'The Supp.AI literature service could not be reached.';
+  }
+  return null;
 }
 
 function slug(s: string) {
@@ -49,6 +62,21 @@ function norm(s: string) {
 function medByName(meds: Medication[], name: string): Medication | undefined {
   const n = norm(name);
   return meds.find((m) => norm(m.name) === n || norm(m.dmdDisplayName || '') === n);
+}
+
+function resolveMedFromDisplay(active: Medication[], displayName: string): Medication | undefined {
+  const direct = medByName(active, displayName);
+  if (direct) return direct;
+  const dn = norm(displayName);
+  return active.find((m) => {
+    const name = norm(m.name);
+    if (dn === name || dn.startsWith(`${name} `) || dn.includes(name)) return true;
+    const pack = norm(m.dmdDisplayName || '');
+    if (pack && (dn === pack || dn.includes(pack) || pack.includes(name))) return true;
+    const label = norm(`${m.name} ${m.dose}`);
+    if (label && (dn === label || dn.startsWith(label) || label.startsWith(dn))) return true;
+    return false;
+  });
 }
 
 function firstToken(displayName: string): string {
@@ -73,9 +101,11 @@ function buildInteraction(
   reason: string,
   detail: string,
   source: string,
+  backendId?: number,
 ): Interaction {
   return {
     id: pairId(medA.name, medB.name),
+    backendId,
     a: medA.name,
     b: medB.name,
     aCategory: medA.category,
@@ -104,36 +134,25 @@ const SOURCE_LABELS: Record<string, string> = {
   suppai: 'Supp.AI',
 };
 
-async function mapWarningsToInteractions(
-  meds: Medication[],
-  warnings: BackendWarning[],
-): Promise<Interaction[]> {
+function mapWarningsToInteractions(meds: Medication[], warnings: BackendWarning[]): Interaction[] {
   const active = meds.filter((m) => m.status === 'active');
   const out: Interaction[] = [];
   for (const w of warnings) {
     const nameA = firstToken(w.med_a.display_name);
     const nameB = firstToken(w.med_b.display_name);
     const medA =
+      resolveMedFromDisplay(active, w.med_a.display_name) ||
       medByName(active, nameA) ||
       active.find((m) => w.med_a.display_name.toLowerCase().includes(m.name.toLowerCase()));
     const medB =
+      resolveMedFromDisplay(active, w.med_b.display_name) ||
       medByName(active, nameB) ||
       active.find((m) => w.med_b.display_name.toLowerCase().includes(m.name.toLowerCase()));
     if (!medA || !medB) continue;
-    let detail = w.summary;
-    let source = SOURCE_LABELS[w.source || ''] || 'MedData';
-    try {
-      const d = await apiFetch<{ full_text?: string; summary?: string; sources?: { source?: string }[] }>(
-        `/interactions/${w.interaction_id}`,
-        { timeoutMs: 15_000 },
-      );
-      detail = d.full_text || d.summary || w.summary;
-      const src = d.sources?.[0]?.source;
-      if (src && SOURCE_LABELS[src]) source = SOURCE_LABELS[src];
-    } catch {
-      /* use summary */
-    }
-    out.push(buildInteraction(medA, medB, w.summary, detail, source));
+    const source = SOURCE_LABELS[w.source || ''] || 'MedData';
+    out.push(
+      buildInteraction(medA, medB, w.summary, w.summary, source, w.interaction_id),
+    );
   }
   return out;
 }
@@ -151,8 +170,6 @@ export async function checkInteractionsLive(
   await checkApiHealth();
   await syncCabinetToBackend(allMeds.filter((m) => m.status === 'active' || m.status === 'archived'));
 
-  // meddata_only:false lets the server fall back to Supp.AI, which is unmetered
-  // and covers the supplement pairs (e.g. warfarin + fish oil) on its own.
   const res = await apiFetch<{ warnings: BackendWarning[]; sources_status?: SourcesStatus }>(
     '/interactions/check',
     {
@@ -162,8 +179,22 @@ export async function checkInteractionsLive(
     },
   );
 
-  const list = await mapWarningsToInteractions(allMeds, res.warnings || []);
+  const list = mapWarningsToInteractions(allMeds, res.warnings || []);
   opts?.onProgress?.(list);
   return { interactions: list, sources: res.sources_status || {} };
 }
 
+/** Load full detail text for Read more (not used on list/card paths). */
+export async function fetchInteractionDetail(backendId: number): Promise<{
+  detail: string;
+  source?: string;
+}> {
+  const d = await apiFetch<{ full_text?: string; summary?: string; sources?: { source?: string }[] }>(
+    `/interactions/${backendId}`,
+    { timeoutMs: 15_000 },
+  );
+  const detail = d.full_text || d.summary || '';
+  const src = d.sources?.[0]?.source;
+  const source = src && SOURCE_LABELS[src] ? SOURCE_LABELS[src] : undefined;
+  return { detail, source };
+}

@@ -1,0 +1,9 @@
+.venv
+__pycache__
+*.pyc
+.pytest_cache
+data/app.sqlite
+data/dmd.sqlite
+.env
+*.md
+!README.md

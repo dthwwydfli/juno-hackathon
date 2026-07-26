@@ -1,5 +1,5 @@
 import type { Medication } from '../data/types';
-import { apiFetch, formatApiReachabilityError, pdfOrigin } from './api';
+import { apiFetch, appOrigin, formatApiReachabilityError, pdfOrigin } from './api';
 import type { ShareSnapshot } from './pdf';
 
 type BackendCategory = 'nhs_prescription' | 'otc' | 'online';
@@ -43,8 +43,22 @@ function toDisplayName(m: Medication): string {
  * It previously used `name|dose`, which never matched a remote row for meds
  * without a GTIN, so every sync created a fresh duplicate.
  */
-function cabinetKey(m: Medication): string {
+export function medicationCabinetKey(m: Medication): string {
   return (m.gtin || toDisplayName(m)).toLowerCase();
+}
+
+/** @deprecated alias */
+function cabinetKey(m: Medication): string {
+  return medicationCabinetKey(m);
+}
+
+/** Fingerprint for interaction cache — stable across client-side med ids. */
+export function interactionCabinetFingerprint(meds: Medication[]): string {
+  return meds
+    .filter((m) => m.status === 'active')
+    .map((m) => `${medicationCabinetKey(m)}:${toDosage(m)}`)
+    .sort()
+    .join('|');
 }
 
 function toDosage(m: Medication): string {
@@ -79,6 +93,8 @@ export async function syncCabinetToBackend(
   const desiredActiveKeys = new Set(desiredActive.map(cabinetKey));
   const desiredArchivedKeys = new Set(desiredArchived.map(cabinetKey));
 
+  const syncWrites: Promise<unknown>[] = [];
+
   for (const m of desiredActive) {
     const key = cabinetKey(m);
     const existing = remoteActive.get(key) || remoteArchived.get(key);
@@ -88,23 +104,27 @@ export async function syncCabinetToBackend(
       regimen: m.regimen,
     };
     if (!existing) {
-      await apiFetch('/medications', {
-        method: 'POST',
-        body: JSON.stringify({
-          display_name: toDisplayName(m),
-          category: toBackendCategory(m.category),
-          dosage: toDosage(m),
-          schedule,
-          gtin: m.gtin || null,
+      syncWrites.push(
+        apiFetch('/medications', {
+          method: 'POST',
+          body: JSON.stringify({
+            display_name: toDisplayName(m),
+            category: toBackendCategory(m.category),
+            dosage: toDosage(m),
+            schedule,
+            gtin: m.gtin || null,
+          }),
+          timeoutMs: SYNC_TIMEOUT_MS,
         }),
-        timeoutMs: SYNC_TIMEOUT_MS,
-      });
+      );
     } else if (existing.archived_at) {
-      await apiFetch(`/medications/${existing.id}`, {
-        method: 'PATCH',
-        body: JSON.stringify({ archive: false, dosage: toDosage(m), schedule }),
-        timeoutMs: SYNC_TIMEOUT_MS,
-      });
+      syncWrites.push(
+        apiFetch(`/medications/${existing.id}`, {
+          method: 'PATCH',
+          body: JSON.stringify({ archive: false, dosage: toDosage(m), schedule }),
+          timeoutMs: SYNC_TIMEOUT_MS,
+        }),
+      );
     }
   }
 
@@ -112,44 +132,56 @@ export async function syncCabinetToBackend(
     const key = cabinetKey(m);
     const existing = remoteActive.get(key) || remoteArchived.get(key);
     if (existing && !existing.archived_at) {
-      await apiFetch(`/medications/${existing.id}`, {
-        method: 'PATCH',
-        body: JSON.stringify({ archive: true }),
-        timeoutMs: SYNC_TIMEOUT_MS,
-      });
-    } else if (!existing) {
-      await apiFetch('/medications', {
-        method: 'POST',
-        body: JSON.stringify({
-          display_name: toDisplayName(m),
-          category: toBackendCategory(m.category),
-          dosage: toDosage(m),
-          schedule: { times: m.times, scheduleLabel: m.scheduleLabel },
-          gtin: m.gtin || null,
-        }),
-        timeoutMs: SYNC_TIMEOUT_MS,
-      });
-      const again = await apiFetch<BackendMed[]>('/medications?status=active', { timeoutMs: SYNC_TIMEOUT_MS });
-      const row = again.find((r) => (r.gtin || r.display_name).toLowerCase() === key);
-      if (row) {
-        await apiFetch(`/medications/${row.id}`, {
+      syncWrites.push(
+        apiFetch(`/medications/${existing.id}`, {
           method: 'PATCH',
           body: JSON.stringify({ archive: true }),
           timeoutMs: SYNC_TIMEOUT_MS,
-        });
-      }
+        }),
+      );
+    } else if (!existing) {
+      syncWrites.push(
+        (async () => {
+          await apiFetch('/medications', {
+            method: 'POST',
+            body: JSON.stringify({
+              display_name: toDisplayName(m),
+              category: toBackendCategory(m.category),
+              dosage: toDosage(m),
+              schedule: { times: m.times, scheduleLabel: m.scheduleLabel },
+              gtin: m.gtin || null,
+            }),
+            timeoutMs: SYNC_TIMEOUT_MS,
+          });
+          const again = await apiFetch<BackendMed[]>('/medications?status=active', {
+            timeoutMs: SYNC_TIMEOUT_MS,
+          });
+          const row = again.find((r) => (r.gtin || r.display_name).toLowerCase() === key);
+          if (row) {
+            await apiFetch(`/medications/${row.id}`, {
+              method: 'PATCH',
+              body: JSON.stringify({ archive: true }),
+              timeoutMs: SYNC_TIMEOUT_MS,
+            });
+          }
+        })(),
+      );
     }
   }
 
   for (const [key, r] of remoteActive) {
     if (!desiredActiveKeys.has(key) && !desiredArchivedKeys.has(key)) {
-      await apiFetch(`/medications/${r.id}`, {
-        method: 'PATCH',
-        body: JSON.stringify({ archive: true }),
-        timeoutMs: SYNC_TIMEOUT_MS,
-      });
+      syncWrites.push(
+        apiFetch(`/medications/${r.id}`, {
+          method: 'PATCH',
+          body: JSON.stringify({ archive: true }),
+          timeoutMs: SYNC_TIMEOUT_MS,
+        }),
+      );
     }
   }
+
+  await Promise.all(syncWrites);
   markCabinetSynced(medications);
 }
 
@@ -175,6 +207,15 @@ export async function createGpShareToken(
 
 export function gpPdfUrlForToken(token: string): string {
   return `${pdfOrigin()}/gp/summary/${token}.pdf`;
+}
+
+/** URL encoded in QR / shared with GP — opens the Vercel app, which loads the PDF from the API.
+ *  Path form, not `/?gp=`: the service worker answers `/` from precache, so a phone holding
+ *  an older bundle silently rendered the landing page instead of the summary. `/gp/` is on
+ *  the navigate-fallback denylist (see vite.config.ts) and always resolves over the network.
+ *  `/?gp=` still works for links already handed out. */
+export function gpSharePageUrlForToken(token: string): string {
+  return `${appOrigin()}/gp/${encodeURIComponent(token)}`;
 }
 
 /** Stable key so share flow does not re-sync on unrelated store updates. */

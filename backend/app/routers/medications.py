@@ -7,6 +7,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from app.db.models import MedCategory, Medication, get_db
+from app.time_util import utc_now
 
 router = APIRouter(prefix="/medications", tags=["medications"])
 
@@ -101,7 +102,7 @@ def create_medication(
         category=body.category,
         dosage=body.dosage,
         schedule=json.dumps(body.schedule),
-        started_at=body.started_at or datetime.utcnow(),
+        started_at=body.started_at or utc_now(),
         dmd_code=body.dmd_code,
         dmd_code_type=body.dmd_code_type,
         gtin=body.gtin,
@@ -161,7 +162,7 @@ def update_medication(
     if body.started_at is not None:
         med.started_at = body.started_at
     if body.archive is True:
-        med.archived_at = datetime.utcnow()
+        med.archived_at = utc_now()
     elif body.archive is False:
         med.archived_at = None
     db.commit()

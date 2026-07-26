@@ -9,8 +9,62 @@ export function pdfOrigin(): string {
   return (o || base()).replace(/\/$/, '');
 }
 
+const DEFAULT_APP_ORIGIN = 'https://pocketary.vercel.app';
+
+/** Origin for GP-facing share links (QR). Prefer env when generating links from local dev. */
+export function appOrigin(): string {
+  const fromEnv = (import.meta.env.VITE_PUBLIC_APP_ORIGIN as string | undefined)?.trim();
+  if (fromEnv) return fromEnv.replace(/\/$/, '');
+  if (typeof window !== 'undefined' && window.location.origin) {
+    return window.location.origin.replace(/\/$/, '');
+  }
+  return DEFAULT_APP_ORIGIN;
+}
+
 export function apiUserId(): string {
   return (import.meta.env.VITE_USER_ID as string | undefined)?.trim() || 'demo';
+}
+
+function hostnameOf(url: string): string | null {
+  try {
+    return new URL(url).hostname;
+  } catch {
+    return null;
+  }
+}
+
+/** localtunnel (*.loca.lt) returns HTTP 511 until the reminder is bypassed in a browser. */
+export function isLocaltunnelHost(url: string): boolean {
+  const host = hostnameOf(url);
+  return host !== null && host.endsWith('.loca.lt');
+}
+
+export function localtunnel511Message(api = apiBaseUrl()): string {
+  return `The API tunnel needs a one-time unlock. Open ${api}/health in a new tab, complete the localtunnel prompt, then reload this app. For demos, prefer ngrok or Cloudflare Tunnel instead of loca.lt.`;
+}
+
+/** Required for browser fetch() to reach uvicorn through localtunnel. */
+export function applyLocaltunnelBypassHeaders(headers: Headers, requestUrl: string): void {
+  if (isLocaltunnelHost(requestUrl)) {
+    headers.set('Bypass-Tunnel-Reminder', 'true');
+  }
+}
+
+/** fetch() to API or PDF URLs with localtunnel bypass when needed. */
+export async function fetchApiUrl(url: string, init: RequestInit = {}): Promise<Response> {
+  const headers = new Headers(init.headers);
+  applyLocaltunnelBypassHeaders(headers, url);
+  return fetch(url, { ...init, headers });
+}
+
+function apiErrorMessage(res: Response, data: unknown): string {
+  if (res.status === 511) {
+    return localtunnel511Message();
+  }
+  if (typeof data === 'object' && data && 'detail' in data) {
+    return String((data as { detail: unknown }).detail);
+  }
+  return res.statusText || 'Request failed';
 }
 
 export class ApiError extends Error {
@@ -37,6 +91,9 @@ export async function checkApiHealth(): Promise<HealthResponse> {
 
 export function formatApiReachabilityError(cause: unknown): string {
   const api = apiBaseUrl();
+  if (cause instanceof ApiError && cause.status === 511) {
+    return cause.message;
+  }
   if (cause instanceof ApiError && cause.status === 408) {
     return `Server at ${api} did not respond in time. Open ${api}/health in your browser.`;
   }
@@ -57,6 +114,8 @@ export async function apiFetch<T = unknown>(
   if (rest.body && !headers.has('Content-Type')) {
     headers.set('Content-Type', 'application/json');
   }
+  const requestUrl = `${apiBaseUrl()}${path.startsWith('/') ? path : `/${path}`}`;
+  applyLocaltunnelBypassHeaders(headers, requestUrl);
   const controller = timeoutMs ? new AbortController() : null;
   const timeoutId =
     controller && timeoutMs
@@ -64,7 +123,7 @@ export async function apiFetch<T = unknown>(
       : undefined;
   let res: Response;
   try {
-    res = await fetch(`${apiBaseUrl()}${path.startsWith('/') ? path : `/${path}`}`, {
+    res = await fetch(requestUrl, {
       ...rest,
       headers,
       signal: controller ? controller.signal : rest.signal,
@@ -87,11 +146,7 @@ export async function apiFetch<T = unknown>(
     }
   }
   if (!res.ok) {
-    const msg =
-      typeof data === 'object' && data && 'detail' in data
-        ? String((data as { detail: unknown }).detail)
-        : res.statusText || 'Request failed';
-    throw new ApiError(msg, res.status, data);
+    throw new ApiError(apiErrorMessage(res, data), res.status, data);
   }
   return data as T;
 }

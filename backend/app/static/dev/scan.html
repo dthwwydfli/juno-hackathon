@@ -4,25 +4,40 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Dev barcode scan</title>
-  <script src="https://unpkg.com/@zxing/library@0.21.3/umd/index.min.js"></script>
+  <script src="https://unpkg.com/@zxing/library@0.23.0/umd/index.min.js"></script>
   <style>
     body { font-family: system-ui, sans-serif; max-width: 640px; margin: 1rem auto; padding: 0 1rem; }
     video { width: 100%; border-radius: 8px; background: #111; }
     pre { background: #f4f4f4; padding: 1rem; overflow: auto; font-size: 12px; }
     .err { color: #b00020; }
+    .toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 1rem; margin: 0.75rem 0; }
+    .toolbar button { font: inherit; padding: 0.4rem 0.75rem; cursor: pointer; }
+    .facing { font-size: 0.85rem; color: #555; text-transform: uppercase; letter-spacing: 0.04em; }
+    .facing strong { color: #111; }
   </style>
 </head>
 <body>
   <h1>Barcode scan (dev)</h1>
   <p>Point camera at GTIN (EAN-13). Uses <code>POST /lookup/barcode</code>.</p>
   <video id="video" playsinline></video>
+  <div class="toolbar">
+    <span class="facing">Camera: <strong id="facingLabel">Rear</strong></span>
+    <button type="button" id="flipBtn" hidden>Switch camera</button>
+  </div>
   <p id="status">Starting camera…</p>
   <label>Or enter code manually: <input id="manual" type="text" /> <button type="button" id="lookupBtn">Lookup</button></label>
   <pre id="out"></pre>
   <script>
     const out = document.getElementById('out');
     const status = document.getElementById('status');
+    const video = document.getElementById('video');
+    const flipBtn = document.getElementById('flipBtn');
+    const facingLabel = document.getElementById('facingLabel');
     const codeReader = new ZXing.BrowserMultiFormatReader();
+
+    let facingMode = 'environment';
+    let stream = null;
+    let scanActive = false;
 
     async function lookup(code) {
       status.textContent = 'Looking up ' + code + '…';
@@ -35,7 +50,7 @@
         const data = await res.json();
         out.textContent = JSON.stringify(data, null, 2);
         status.textContent = res.ok ? 'Found' : 'Not found';
-        if (!res.ok) status.className = 'err';
+        status.className = res.ok ? '' : 'err';
       } catch (e) {
         status.textContent = e.message;
         status.className = 'err';
@@ -47,14 +62,44 @@
       if (v) lookup(v);
     };
 
-    (async () => {
+    function updateFacingLabel() {
+      facingLabel.textContent = facingMode === 'environment' ? 'Rear' : 'Front';
+    }
+
+    function stopStream() {
+      scanActive = false;
+      codeReader.reset();
+      if (stream) {
+        stream.getTracks().forEach((t) => t.stop());
+        stream = null;
+      }
+      video.srcObject = null;
+    }
+
+    async function startCamera() {
+      stopStream();
+      status.textContent = 'Starting camera…';
+      status.className = '';
+      updateFacingLabel();
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
-        document.getElementById('video').srcObject = stream;
-        await document.getElementById('video').play();
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: { ideal: facingMode } },
+        });
+        video.srcObject = stream;
+        await video.play();
+
+        try {
+          const devices = await navigator.mediaDevices.enumerateDevices();
+          const videoInputs = devices.filter((d) => d.kind === 'videoinput');
+          flipBtn.hidden = videoInputs.length <= 1;
+        } catch {
+          flipBtn.hidden = true;
+        }
+
         status.textContent = 'Scanning…';
-        codeReader.decodeFromVideoDevice(undefined, 'video', (result, err) => {
-          if (result) {
+        scanActive = true;
+        codeReader.decodeFromVideoElementContinuously(video, (result) => {
+          if (result && scanActive) {
             const text = result.getText();
             status.textContent = 'Scanned: ' + text;
             lookup(text);
@@ -64,7 +109,14 @@
         status.textContent = 'Camera error: ' + e.message + '. Use manual entry.';
         status.className = 'err';
       }
-    })();
+    }
+
+    flipBtn.onclick = () => {
+      facingMode = facingMode === 'environment' ? 'user' : 'environment';
+      startCamera();
+    };
+
+    startCamera();
   </script>
 </body>
 </html>

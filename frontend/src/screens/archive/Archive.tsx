@@ -29,7 +29,7 @@ export function Archive() {
                 <span className="count">{archived.length}</span>
               </div>
               <div className="arch-note">Medicines you no longer take. Tap one to restore it to your list.</div>
-              <div className="arch-list">
+              <div className="arch-list stagger">
                 {archived.map((med) => (
                   <MedCard key={med.id} med={med} onClick={() => restoreMedication(med.id)} trailing="restore" />
                 ))}

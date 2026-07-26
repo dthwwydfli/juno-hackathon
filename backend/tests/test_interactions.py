@@ -48,6 +48,37 @@ def test_build_pair_summary_includes_suppai_evidence():
 
 
 @pytest.mark.asyncio
+async def test_check_pair_suppai_retries_empty_evidence():
+    agent_a = {"cui": "C1", "ent_type": "supplement", "preferred_name": "Fish Oils"}
+    agent_b = {"cui": "C2", "ent_type": "drug", "preferred_name": "Ramipril"}
+    calls = 0
+
+    async def fetch(_a, _b):
+        nonlocal calls
+        calls += 1
+        if calls == 1:
+            return {"interaction_id": "C1-C2", "evidence": []}
+        return {
+            "interaction_id": "C1-C2",
+            "evidence": [
+                {
+                    "paper": {"retraction": False, "human_study": True},
+                    "sentences": [{"spans": [{"text": "May affect blood pressure."}]}],
+                }
+            ],
+        }
+
+    with patch("app.services.suppai.fetch_interaction_evidence", AsyncMock(side_effect=fetch)):
+        interaction, source = await check_pair_suppai(
+            "Fish oil", "Ramipril", agent_a, agent_b, retry_empty_evidence=True
+        )
+
+    assert interaction is not None
+    assert source is not None
+    assert calls == 2
+
+
+@pytest.mark.asyncio
 async def test_fetch_interaction_evidence_tries_reversed_cui_order():
     responses = {
         "https://supp.ai/api/interaction/C1-C2": MagicMock(status_code=404),

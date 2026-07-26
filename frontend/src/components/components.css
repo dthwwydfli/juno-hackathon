@@ -1,5 +1,10 @@
-/* Shared component styles — ported from the mockups' duplicated blocks.
-   Screen-specific CSS lives with each screen. */
+/* Shared component styles.
+
+   This file is where the app's repeated primitives now live. Several of them
+   (the uppercase label, the count chip, the primary CTA, the medication pill,
+   the "discuss with your GP" banner) used to be redeclared in five to ten
+   screen stylesheets with drifting radii, paddings and type sizes. Screens
+   should reach for the classes here before writing a local variant. */
 
 /* ---------- Status bar ---------- */
 .status {
@@ -9,34 +14,71 @@
   align-items: flex-end;
   justify-content: space-between;
   padding: 0 30px 6px;
-  font-size: 14px;
+  font-size: var(--fs-footnote);
   font-weight: 600;
+  font-variant-numeric: tabular-nums;
   padding-top: env(safe-area-inset-top);
 }
 .status .signal { display: flex; align-items: center; gap: 6px; }
+.status.on-dark { color: #fff; }
 
 /* ---------- Header ---------- */
 .header {
   flex: 0 0 auto;
-  padding: 6px 22px 14px;
+  padding: 6px var(--gutter) 14px;
   display: flex;
   align-items: center;
   justify-content: space-between;
+  position: relative;
+  z-index: 3;
+  background: var(--app-bg);
+  transition: padding var(--dur) var(--ease-spring);
 }
-.header h1 { font-size: 30px; font-weight: 700; letter-spacing: -.02em; }
-.header .sub { display: block; font-size: 13px; font-weight: 500; color: var(--muted); margin-top: 2px; }
+.header h1 {
+  font-size: var(--fs-display);
+  font-weight: 700;
+  letter-spacing: var(--lsp-display);
+  line-height: 1.1;
+  transition: font-size var(--dur) var(--ease-spring), letter-spacing var(--dur) var(--ease-spring);
+}
+.header .sub {
+  display: block;
+  font-size: var(--fs-footnote);
+  font-weight: 450;
+  color: var(--muted);
+  margin-top: 2px;
+  transition: opacity var(--dur) var(--ease-out), max-height var(--dur) var(--ease-spring);
+}
+
+/* Scroll-condensed state: the large title collapses to a compact one and a
+   hairline appears, the way an iOS large title does. Driven by useCondense. */
+.header.condensed { padding-bottom: 10px; }
+.header.condensed h1 { font-size: var(--fs-subhead); letter-spacing: var(--lsp-tight); }
+.header.condensed .sub { opacity: 0; max-height: 0; overflow: hidden; }
+.header.condensed::after {
+  content: '';
+  position: absolute;
+  left: 0; right: 0; bottom: 0;
+  height: 1px;
+  background: var(--hairline);
+  transform: scaleY(.5);
+  transform-origin: bottom;
+}
+
 .hbtns { display: flex; gap: 10px; }
+
 .icon-btn {
   width: 40px; height: 40px;
-  border-radius: 50%;
+  border-radius: var(--r-pill);
   background: var(--surface);
   border: 1px solid var(--hairline);
   display: flex; align-items: center; justify-content: center;
   color: var(--text);
-  box-shadow: var(--shadow);
+  box-shadow: var(--elev-1);
   flex: 0 0 auto;
 }
-.icon-btn:active { transform: scale(.94); }
+.icon-btn:hover { background: var(--surface-sunk); }
+.icon-btn:active { transform: scale(.92); }
 
 /* Sub-screen header (pushed screens): back chevron + title */
 .subhead {
@@ -44,35 +86,90 @@
   display: flex; align-items: center; gap: 6px;
   padding: 4px 14px 12px;
 }
-.subhead .title { font-size: 17px; font-weight: 650; letter-spacing: -.01em; flex: 1 1 auto; text-align: center; }
+.subhead .title {
+  font-size: var(--fs-subhead);
+  font-weight: 600;
+  letter-spacing: var(--lsp-tight);
+  flex: 1 1 auto;
+  text-align: center;
+}
 .subhead .ghost { width: 40px; flex: 0 0 auto; }
 
-/* ---------- Segmented control ---------- */
-.segwrap { padding: 0 22px 4px; flex: 0 0 auto; }
+/* ---------- Segmented control ----------
+   The selected tab used to cross-fade its background. A real segmented control
+   slides, because the thumb is a physical object that moves between slots. */
+.segwrap { padding: 0 var(--gutter) 4px; flex: 0 0 auto; }
 .segment {
+  position: relative;
   display: flex;
   background: var(--surface-sunk);
   border-radius: 14px;
   padding: 4px;
-  gap: 2px;
+}
+.segment::before {
+  content: '';
+  position: absolute;
+  top: 4px; bottom: 4px; left: 4px;
+  width: calc((100% - 8px) / var(--seg-n, 3));
+  border-radius: 10px;
+  background: var(--surface);
+  box-shadow: var(--elev-1);
+  transform: translate3d(calc(var(--seg-i, 0) * 100%), 0, 0);
+  transition: transform var(--dur) var(--ease-spring);
 }
 .segment button {
+  position: relative;
+  z-index: 1;
   flex: 1; border: 0; background: transparent;
-  font: inherit; font-size: 14px; font-weight: 600;
+  font: inherit; font-size: var(--fs-callout); font-weight: 600;
   color: var(--muted);
   padding: 9px 0; border-radius: 10px;
   display: flex; align-items: center; justify-content: center; gap: 6px;
 }
-.segment button .count {
-  font-size: 11px; font-weight: 700;
-  background: var(--hairline); color: var(--muted);
-  border-radius: 20px; padding: 1px 6px;
+.segment button[aria-selected="true"] { color: var(--text); }
+.segment button:active { transform: scale(.97); }
+
+/* ---------- Count / status chip ----------
+   Previously written seven times with seven different paddings. */
+.chip-count {
+  font-size: var(--fs-micro);
+  font-weight: 700;
+  background: var(--surface-sunk);
+  color: var(--muted);
+  border-radius: var(--r-pill);
+  padding: 2px 8px;
   font-variant-numeric: tabular-nums;
 }
-.segment button[aria-selected="true"] { background: var(--surface); color: var(--text); box-shadow: var(--shadow); }
+.chip-count.on { background: var(--accent-tint); color: var(--accent-ink); }
+.chip-count.amber { background: var(--amber-tint); color: var(--amber-ink); }
+
+.segment button .count {
+  font-size: var(--fs-micro); font-weight: 700;
+  background: var(--hairline); color: var(--muted);
+  border-radius: var(--r-pill); padding: 1px 6px;
+  font-variant-numeric: tabular-nums;
+  transition: background-color var(--dur) var(--ease-out), color var(--dur) var(--ease-out);
+}
 .segment button[aria-selected="true"] .count { background: var(--accent-tint); color: var(--accent-ink); }
 
-/* ---------- Bottom nav ---------- */
+/* Status pill ("Linked", "Up to date"). Was duplicated across Settings and
+   the NHS screen with different dot sizes. */
+.chip-status {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: var(--fs-caption); font-weight: 650;
+  background: var(--accent-tint); color: var(--accent-ink);
+  border-radius: var(--r-pill); padding: 4px 11px;
+}
+.chip-status::before {
+  content: '';
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--accent);
+}
+
+/* ---------- Bottom nav ----------
+   Genuinely floats over scrolling content, so it gets the material treatment.
+   (backdrop-filter is already proven to work inside the clipped phone frame —
+   the barcode match card uses it.) */
 .nav {
   position: absolute;
   left: 0; right: 0; bottom: 0;
@@ -82,30 +179,55 @@
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  background: var(--surface);
-  border-top: 1px solid var(--hairline);
-  border-radius: 0 0 46px 46px;
+  background: var(--mat-bg);
+  -webkit-backdrop-filter: var(--mat-blur);
+  backdrop-filter: var(--mat-blur);
+  border-radius: 0 0 var(--r-phone) var(--r-phone);
   z-index: 4;
+}
+.nav::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 1px;
+  background: var(--hairline);
+  transform: scaleY(.5);
+  transform-origin: top;
 }
 .nav-item {
   display: flex; flex-direction: column; align-items: center; gap: 5px;
-  font-size: 11px; font-weight: 600; color: var(--muted);
+  font-size: var(--fs-micro); font-weight: 600; color: var(--muted);
   background: none; border: 0; width: 64px;
 }
 .nav-item svg { width: 25px; height: 25px; }
 .nav-item.active { color: var(--accent-ink); }
+.nav-item.nav-alert { position: relative; }
+.nav-item.nav-alert::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  right: calc(50% - 22px);
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--amber);
+}
+.nav-item:active { transform: scale(.93); }
 .nav-add { display: flex; flex-direction: column; align-items: center; gap: 5px; }
+
+/* No glow. A coloured halo under a button is the single most reliable tell of
+   a generated interface; real elevation is neutral and directional. */
 .fab {
-  width: 60px; height: 60px; border-radius: 20px;
-  background: var(--accent); color: #fff;
+  width: 60px; height: 60px; border-radius: var(--r-lg);
+  background: var(--accent-solid); color: var(--on-accent);
   display: flex; align-items: center; justify-content: center;
-  box-shadow: 0 8px 20px -4px color-mix(in srgb, var(--accent) 55%, transparent);
+  box-shadow: var(--elev-2);
   margin-top: -8px; border: 0;
 }
-.fab:active { transform: scale(.95); }
-.nav-add span { font-size: 11px; font-weight: 600; color: var(--accent-ink); }
+.fab:active { transform: scale(.94); }
+.nav-add span { font-size: var(--fs-micro); font-weight: 600; color: var(--accent-ink); }
 
-@media (max-width: 480px) {
+@media (max-width: 480px) { /* --layout-mobile-max */
   .nav { border-radius: 0; }
 }
 
@@ -116,30 +238,78 @@
   border-radius: 18px;
   padding: 13px 14px;
   display: flex; align-items: center; gap: 13px;
-  box-shadow: var(--shadow);
+  box-shadow: var(--elev-1);
   width: 100%; text-align: left;
+  position: relative;
+  overflow: hidden;
 }
-.med.flag { border-color: color-mix(in srgb, var(--amber) 45%, var(--hairline)); }
-.med .thumb {
-  width: 50px; height: 50px; border-radius: 14px; flex: 0 0 auto;
-  background: var(--surface-sunk); color: var(--muted);
+
+/* The amber left rail is gone. It read as a crude tab wrapping the corner, and
+   the badge on the right already carries the signal — one amber mark per row
+   is enough, and keeps the single-amber rule honest. */
+.med.flag { box-shadow: var(--elev-1); }
+
+/* No tile behind the pill. A rounded square around every glyph was half of
+   what made the rows look stamped out of a template. */
+.med .thumb,
+.med-row .thumb {
+  width: 44px; height: 44px; flex: 0 0 auto;
   display: flex; align-items: center; justify-content: center;
 }
-.med .body { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; }
-.med .name { font-size: 16px; font-weight: 650; letter-spacing: -.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.med .colloq { font-size: 13.5px; color: var(--muted); margin-top: 1px; }
-.med .dose { font-size: 12px; color: var(--faint); margin-top: 5px; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
-.med .dot { width: 3px; height: 3px; border-radius: 50%; background: var(--faint); }
-.med .right { flex: 0 0 auto; display: flex; align-items: center; gap: 8px; }
+.pill-glyph {
+  display: block;
+  filter: drop-shadow(0 1px 1.5px rgba(26, 26, 23, .22));
+}
+
+.med .body, .med-row .body { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; }
+.med .name, .med-row .name { font-size: var(--fs-body); font-weight: 650; letter-spacing: var(--lsp-tight); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.med .colloq, .med-row .colloq { font-size: var(--fs-footnote); color: var(--muted); margin-top: 1px; }
+.med .dose, .med-row .dose { font-size: var(--fs-caption); color: var(--faint); margin-top: 4px; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.med .dot, .med-row .dot { width: 3px; height: 3px; border-radius: 50%; background: var(--faint); }
+.med .right, .med-row .right { flex: 0 0 auto; display: flex; align-items: center; gap: 2px; }
 .med.tappable { cursor: pointer; }
-.med.tappable:active { transform: scale(.99); }
-.chev { color: var(--faint); }
+.med.tappable:hover { border-color: color-mix(in srgb, var(--accent) 30%, var(--hairline)); }
+.med.tappable:active { transform: scale(.985); }
+.chev { color: var(--faint); flex: 0 0 auto; margin-left: 4px; }
+
+/* ---------- Grouped inset list ----------
+   One container with hairline separators, the way iOS Health/Settings/Reminders
+   render a list — rather than N floating cards with gaps between them, which is
+   the pattern that reads as a template. */
+.list-group {
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+  border-radius: var(--r-md);
+  overflow: hidden;
+  box-shadow: var(--elev-1);
+}
+.list-group > * + * {
+  border-top: 1px solid var(--hairline);
+}
+
+.med-row {
+  background: var(--surface);
+  padding: 11px var(--s3) 11px 14px;
+  display: flex; align-items: center; gap: 13px;
+  width: 100%; text-align: left;
+  min-height: 68px;
+}
+/* Rows highlight, they do not shrink — scaling a row inside a clipped group
+   exposes the container edge. */
+.med-row.tappable { cursor: pointer; }
+.med-row.tappable:hover { background: var(--surface-sunk); }
+.med-row.tappable:active { background: var(--surface-sunk); }
+
+/* ---------- Row action badges ----------
+   Visual size stays as designed; the tap target is padded out to the 44×44
+   minimum via a transparent box, so touch accuracy improves with no visual
+   change. */
 .warn-badge {
   width: 30px; height: 30px; border-radius: 50%;
   background: var(--amber-tint); color: var(--amber);
   display: flex; align-items: center; justify-content: center;
 }
-.act-btn { border: 0; cursor: pointer; }
+.act-btn { border: 0; cursor: pointer; background: none; }
 .act-btn:active { transform: scale(.9); }
 .edit-badge {
   width: 34px; height: 34px; border-radius: 50%;
@@ -147,66 +317,147 @@
   display: flex; align-items: center; justify-content: center;
 }
 .edit-badge:hover { color: var(--accent-ink); background: var(--accent-tint); }
-.warn-badge.act-btn { width: 34px; height: 34px; }
 .restore-badge {
   width: 34px; height: 34px; border-radius: 50%;
   background: var(--accent-tint); color: var(--accent-ink);
   display: flex; align-items: center; justify-content: center;
 }
 
+.warn-badge.act-btn,
+.edit-badge.act-btn {
+  width: 44px; height: 44px;
+  background: none;
+  border-radius: 50%;
+}
+.warn-badge.act-btn::before {
+  content: '';
+  position: absolute;
+  width: 30px; height: 30px; border-radius: 50%;
+  background: var(--amber-tint);
+}
+.warn-badge.act-btn { position: relative; color: var(--amber); }
+.warn-badge.act-btn svg { position: relative; }
+.edit-badge.act-btn:hover { background: var(--accent-tint); }
+
+/* ---------- Medication pill ----------
+   The interaction pair pill, previously forked three ways across Interactions,
+   ReadMore and the Warning modal with drifting radii and icon backgrounds. */
+.med-pill {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex; align-items: center; gap: 9px;
+  background: var(--surface-sunk);
+  border-radius: var(--r-sm);
+  padding: 9px 11px;
+}
+.med-pill .mp-icon {
+  width: 30px; height: 30px; border-radius: var(--r-xs); flex: 0 0 auto;
+  background: var(--surface); color: var(--muted);
+  display: flex; align-items: center; justify-content: center;
+}
+.med-pill .mp-body { min-width: 0; display: flex; flex-direction: column; }
+.med-pill .mp-name { font-size: var(--fs-callout); font-weight: 650; letter-spacing: var(--lsp-tight); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.med-pill .mp-meta { font-size: var(--fs-caption); color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
 /* ---------- Modal + bottom sheet ---------- */
 .scrim {
   position: absolute; inset: 0;
-  background: rgba(10,10,8,.42);
+  background: var(--scrim-bg);
+  -webkit-backdrop-filter: blur(3px);
+  backdrop-filter: blur(3px);
   display: flex; z-index: 20;
-  animation: fade .18s ease;
+  animation: scrim-in var(--dur) var(--ease-out);
 }
 .scrim.center { align-items: center; justify-content: center; padding: 22px; }
 .scrim.bottom { align-items: flex-end; }
-@keyframes fade { from { opacity: 0; } to { opacity: 1; } }
+
 .sheet {
   background: var(--surface);
   width: 100%;
-  border-radius: 26px 26px 0 0;
+  border-radius: var(--r-xl) var(--r-xl) 0 0;
   padding: 10px 18px 26px;
   padding-bottom: max(26px, env(safe-area-inset-bottom));
-  box-shadow: 0 -12px 40px rgba(0,0,0,.25);
-  animation: rise .22s cubic-bezier(.2,.8,.2,1);
+  box-shadow: var(--elev-2);
+  animation: sheet-rise var(--dur) var(--ease-spring);
 }
 .sheet .grip { width: 40px; height: 5px; border-radius: 3px; background: var(--hairline); margin: 2px auto 12px; }
-@keyframes rise { from { transform: translateY(30px); } to { transform: translateY(0); } }
+
 .modal-card {
   background: var(--surface);
-  border-radius: 26px;
+  border-radius: var(--r-xl);
   padding: 22px;
   width: 100%; max-width: 340px;
-  box-shadow: 0 24px 60px rgba(0,0,0,.3);
-  animation: pop .2s cubic-bezier(.2,.8,.2,1);
+  box-shadow: var(--elev-2);
+  animation: modal-pop var(--dur) var(--ease-spring);
 }
-@keyframes pop { from { transform: scale(.94); opacity: .6; } to { transform: scale(1); opacity: 1; } }
 
-/* ---------- Buttons ---------- */
+/* ---------- Buttons ----------
+   One CTA. The app had eight, at four radii and four glow geometries.
+   The fill is --accent-solid rather than --accent: white on #00A896 is only
+   ~3:1, which fails AA at these sizes. */
 .btn {
   display: flex; align-items: center; justify-content: center; gap: 8px;
-  width: 100%; padding: 15px; border: 0; border-radius: 16px;
-  font-size: 15px; font-weight: 650;
-  background: var(--accent); color: #fff;
-  box-shadow: 0 8px 20px -6px color-mix(in srgb, var(--accent) 55%, transparent);
+  width: 100%; padding: 15px; border: 0; border-radius: var(--r-md);
+  font-size: var(--fs-body); font-weight: 650;
+  background: var(--accent-solid); color: var(--on-accent);
+  box-shadow: var(--elev-1);
 }
-.btn:active { transform: scale(.985); }
-.btn.secondary { background: var(--surface); color: var(--text); border: 1px solid var(--hairline); box-shadow: var(--shadow); }
+.btn:hover:not(:disabled) { background: color-mix(in srgb, var(--accent-solid) 88%, #000); }
+.btn:active { transform: scale(.98); }
+.btn:disabled { opacity: .45; cursor: not-allowed; }
+
+/* .primary is what the Warning modal asks for; it used to resolve to nothing. */
+.btn.primary { background: var(--accent-solid); color: var(--on-accent); }
+.btn.secondary { background: var(--surface); color: var(--text); border: 1px solid var(--hairline); box-shadow: var(--elev-1); }
+.btn.secondary:hover:not(:disabled) { background: var(--surface-sunk); }
 .btn.ghost { background: transparent; color: var(--accent-ink); box-shadow: none; }
+.btn.ghost:hover:not(:disabled) { background: var(--accent-tint); }
 
 /* ---------- Not-medical-advice / GP note ---------- */
 .gp-note {
   display: flex; align-items: flex-start; gap: 8px;
-  font-size: 12.5px; color: var(--muted); line-height: 1.4;
+  font-size: var(--fs-caption); color: var(--muted); line-height: 1.4;
 }
 .gp-note svg { flex: 0 0 auto; margin-top: 1px; color: var(--amber); }
+
+/* ---------- "Please discuss with your GP" banner ----------
+   Was byte-identical in interactions.css and readmore.css. */
+.gp-banner {
+  display: flex; align-items: flex-start; gap: 12px;
+  background: var(--accent-tint);
+  padding: 14px 18px;
+  flex: 0 0 auto;
+}
+.gp-banner .gb-icon {
+  width: 34px; height: 34px; border-radius: 50%; flex: 0 0 auto;
+  background: var(--surface); color: var(--accent-ink);
+  display: flex; align-items: center; justify-content: center;
+}
+.gp-banner .gb-title { font-size: var(--fs-callout); font-weight: 650; color: var(--accent-ink); }
+.gp-banner .gb-text { font-size: var(--fs-footnote); color: var(--text); line-height: 1.4; margin-top: 1px; }
 
 /* ---------- Source attribution card ---------- */
 .source-card {
   display: flex; align-items: center; gap: 10px;
-  background: var(--surface-sunk); border-radius: 14px; padding: 12px 14px;
-  font-size: 12.5px; color: var(--muted);
+  background: var(--surface-sunk); border-radius: var(--r-md); padding: 12px 14px;
+  font-size: var(--fs-caption); color: var(--muted);
 }
+
+/* ---------- Empty state ----------
+   The app had four unrelated empty-state designs; this is the good one from
+   Archive, promoted so the others can use it. */
+.empty-state {
+  flex: 1 1 auto;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  text-align: center;
+  gap: 10px;
+  padding: 40px 30px;
+}
+.empty-state .es-icon {
+  width: 64px; height: 64px; border-radius: var(--r-lg);
+  background: var(--surface-sunk); color: var(--faint);
+  display: flex; align-items: center; justify-content: center;
+  margin-bottom: 2px;
+}
+.empty-state .es-title { font-size: var(--fs-subhead); font-weight: 650; letter-spacing: var(--lsp-tight); }
+.empty-state .es-text { font-size: var(--fs-footnote); color: var(--muted); line-height: 1.45; max-width: 260px; }

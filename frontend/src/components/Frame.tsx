@@ -1,14 +1,22 @@
 import type { ReactNode } from 'react';
+import { APP_NAME } from '../lib/brand';
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Icon } from './Icon';
 import './components.css';
 
-/** The phone shell. Put a StatusBar + content inside. */
-export function PhoneFrame({ children, label }: { children: ReactNode; label?: string }) {
+/**
+ * The physical phone. Rendered ONCE by App.tsx, outside the router, so it stays
+ * put while screens move inside it.
+ *
+ * Splitting this out of PhoneFrame is what makes stack transitions possible
+ * without editing a single screen: two screens can be mounted at once inside
+ * one shell, instead of each screen dragging its own frame along with it.
+ */
+export function PhoneShell({ children }: { children: ReactNode }) {
   return (
     <div className="stage">
-      <div className="phone" role="group" aria-label={label ?? 'Pharmacy in Your Pocket'}>
+      <div className="phone">
         {children}
         <div className="home-ind" />
       </div>
@@ -16,10 +24,22 @@ export function PhoneFrame({ children, label }: { children: ReactNode; label?: s
   );
 }
 
+/**
+ * One screen's fill layer. Keeps its original name and signature so all 11
+ * screens continue to work untouched — it just no longer owns the frame.
+ */
+export function PhoneFrame({ children, label }: { children: ReactNode; label?: string }) {
+  return (
+    <div className="screen" role="group" aria-label={label ?? APP_NAME}>
+      {children}
+    </div>
+  );
+}
+
 /** iOS-style status bar (9:41 + signal/battery), identical across the mockups. */
 export function StatusBar({ dark = false }: { dark?: boolean }) {
   return (
-    <div className="status" style={dark ? { color: '#fff' } : undefined}>
+    <div className={`status${dark ? ' on-dark' : ''}`}>
       <span>9:41</span>
       <span className="signal">
         <svg width="18" height="12" viewBox="0 0 18 12" fill="currentColor"><rect x="0" y="7" width="3" height="5" rx="1" /><rect x="5" y="4.5" width="3" height="7.5" rx="1" /><rect x="10" y="2" width="3" height="10" rx="1" /><rect x="15" y="0" width="3" height="12" rx="1" opacity=".35" /></svg>
@@ -30,10 +50,10 @@ export function StatusBar({ dark = false }: { dark?: boolean }) {
 }
 
 /** Home / Interactions header: title + subtitle + persistent home, profile & QR buttons. */
-export function AppHeader({ title, subtitle, showHome = true }: { title: string; subtitle?: string; showHome?: boolean }) {
+export function AppHeader({ title, subtitle, showHome = true, condensed = false }: { title: string; subtitle?: string; showHome?: boolean; condensed?: boolean }) {
   const nav = useNavigate();
   return (
-    <div className="header">
+    <div className={`header${condensed ? ' condensed' : ''}`}>
       <div>
         <h1>{title}</h1>
         {subtitle && <span className="sub">{subtitle}</span>}
@@ -79,17 +99,17 @@ export function SubHeader({ title, onBack, right }: { title: string; onBack?: ()
 type NavKey = 'interactions' | 'share' | null;
 
 /** Bottom navigation: Interactions | ＋Add | Share. */
-export function BottomNav({ active }: { active?: NavKey }) {
+export function BottomNav({ active, interactionsAlert }: { active?: NavKey; interactionsAlert?: boolean }) {
   const nav = useNavigate();
   return (
     <div className="nav">
-      <button className={`nav-item${active === 'interactions' ? ' active' : ''}`} onClick={() => nav('/interactions')}>
+      <button className={`nav-item${active === 'interactions' ? ' active' : ''}${interactionsAlert ? ' nav-alert' : ''}`} onClick={() => nav('/interactions')}>
         <Icon name="warning" />
         Interactions
       </button>
       <div className="nav-add">
         <button className="fab" aria-label="Add medication" onClick={() => nav('/add')}>
-          <Icon name="plus" size={26} strokeWidth={2.2} />
+          <Icon name="plus" size={26} strokeWidth={2} />
         </button>
         <span>Add</span>
       </div>

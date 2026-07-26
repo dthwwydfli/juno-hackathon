@@ -13,6 +13,7 @@ from app.schemas.gp_snapshot import GpShareSnapshot
 from app.services.demo_seed import DEMO_USER_ID, seed_demo_cabinet
 from app.services.gp_summary import format_gp_interaction_line
 from app.services.pdf import build_gp_pdf, build_gp_pdf_from_snapshot
+from app.time_util import as_utc_aware, utc_now
 
 router = APIRouter(prefix="/gp", tags=["gp"])
 
@@ -33,7 +34,7 @@ def _validate_token(db: Session, token: str) -> GpShareToken:
     row = db.query(GpShareToken).filter(GpShareToken.token == token).first()
     if not row:
         raise HTTPException(status_code=404, detail="Invalid or expired token")
-    if row.expires_at < datetime.utcnow():
+    if as_utc_aware(row.expires_at) < utc_now():
         raise HTTPException(status_code=410, detail="Share link expired")
     return row
 
@@ -51,7 +52,7 @@ def create_share_token(
     user_id: str = Depends(get_user_id),
 ):
     token = secrets.token_urlsafe(32)
-    expires = datetime.utcnow() + timedelta(hours=settings.gp_token_ttl_hours)
+    expires = utc_now() + timedelta(hours=settings.gp_token_ttl_hours)
     row = GpShareToken(
         token=token,
         user_id=user_id,

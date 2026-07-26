@@ -7,7 +7,7 @@ from typing import Any
 from sqlalchemy.orm import Session
 
 from app.config import DISCLAIMER
-from app.db.models import InteractionRecord, Medication
+from app.db.models import InteractionRecord, MedCategory, Medication
 from app.services.drug_names import primary_lookup_name
 from app.services.meddata import (
     MedDataResult,
@@ -130,20 +130,27 @@ def build_pair_summary(
     return severity, summary, full_text
 
 
-async def _resolve_suppai_agents(meds: list[Medication]) -> dict[int, dict[str, Any]]:
-    """One agent search per medication instead of one per pair."""
+async def _resolve_suppai_agents(meds: list[Medication]) -> tuple[dict[int, dict[str, Any]], int]:
+    """One agent search per medication instead of one per pair. Returns (agents, failure_count)."""
     sem = asyncio.Semaphore(_SUPPAI_CONCURRENCY)
+    failures = 0
 
     async def one(med: Medication):
+        nonlocal failures
         async with sem:
             try:
-                return med.id, await search_agent(med.display_name)
+                agent = await search_agent(med.display_name)
+                if agent is None:
+                    failures += 1
+                return med.id, agent
             except Exception as e:  # network noise must not fail the whole check
                 log.warning("Supp.AI agent lookup failed for %s: %s", med.display_name, e)
+                failures += 1
                 return med.id, None
 
     pairs = await asyncio.gather(*(one(m) for m in meds))
-    return {mid: agent for mid, agent in pairs if agent}
+    agents = {mid: agent for mid, agent in pairs if agent}
+    return agents, failures
 
 
 async def check_interactions_for_user(
@@ -190,8 +197,9 @@ async def check_interactions_for_user(
     }
 
     suppai_sources: dict[tuple[int, int], dict[str, Any]] = {}
+    suppai_agent_failures = 0
     if not meddata_only:
-        agents = await _resolve_suppai_agents(meds)
+        agents, suppai_agent_failures = await _resolve_suppai_agents(meds)
         # Supp.AI only holds supplement/drug pairs, so skip the rest entirely.
         candidates = [
             (a, b)
@@ -219,6 +227,10 @@ async def check_interactions_for_user(
             results = await asyncio.gather(*(one(a, b) for a, b in candidates))
             suppai_sources = {k: v for k, v in results if v}
             sources["suppai"] = "ok"
+        if suppai_agent_failures > 0:
+            sources["suppai_agent_failures"] = str(suppai_agent_failures)
+            if any(m.category == MedCategory.otc for m in meds):
+                sources["suppai"] = "partial"
 
     warnings: list[dict[str, Any]] = []
     for a, b in pairs:

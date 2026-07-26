@@ -26,11 +26,11 @@ export function Settings() {
       <StatusBar />
       <SubHeader title="Settings" onBack={() => nav('/home')} />
       <div className="screen-body">
-        <div className="settings-screen">
+        <div className="settings-screen stagger">
 
           {/* profile card */}
           <button className="profile" type="button" onClick={() => nav('/settings')}>
-            <span className="pavatar"><Icon name="profile" size={30} strokeWidth={1.7} /></span>
+            <span className="pavatar"><Icon name="profile" size={30} strokeWidth={1.6} /></span>
             <div className="pinfo">
               <div className="pname">{profile.name}</div>
               <div className="pmeta">{profile.age} · {profile.gender}{profile.nhsLinked ? ' · NHS linked' : ''}</div>
@@ -89,7 +89,7 @@ export function Settings() {
               <button className="row" type="button" onClick={() => nav('/settings/nhs')}>
                 <span className="ricon"><Icon name="link" size={18} /></span>
                 <span className="rlabel">NHS connection<small>Last synced {state.lastSynced}</small></span>
-                <span className="conn"><span className="d" /> Linked</span>
+                <span className="conn">Linked</span>
                 <Icon name="chevron" className="chev" size={19} />
               </button>
               <div className="theme-row">
