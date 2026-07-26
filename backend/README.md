@@ -161,6 +161,7 @@ pytest
 
 - Send `X-User-Id` on cabinet, interaction, and GP routes.
 - CORS origins configured via `CORS_ORIGINS` (includes `http://localhost:5173`).
+- **Vercel + phone barcode scan:** [`../docs/deploy-vercel-phone-scan.md`](../docs/deploy-vercel-phone-scan.md) — bind API with `./scripts/run_lan_api.sh` or uvicorn `--host 0.0.0.0`.
 - Product PRD: [`../plan.md`](../plan.md).
 - Wiring contract: [`../first.md`](../first.md).
 - Vite app: [`../frontend/`](../frontend/).
