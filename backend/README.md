@@ -132,6 +132,19 @@ curl -s -X POST http://localhost:8000/interactions/check \
   -d '{}' | jq
 ```
 
+**Interaction check troubleshooting**
+
+1. `GET http://localhost:8000/health` — expect `meddata_configured: true`.
+2. If `sources_status.meddata` is `unavailable` and `meddata_detail` is `403 Forbidden`, rotate or fix `MEDDATA_API_KEY` in `.env` (free signup: MedData docs).
+3. After a 403 or quota hit, MedData calls are blocked for several hours. Clear the cooldown locally:
+
+```bash
+cd backend && source .venv/bin/activate
+python scripts/clear_meddata_block.py
+```
+
+Then restart uvicorn and retry the curl check above.
+
 **Interaction detail**
 
 ```bash

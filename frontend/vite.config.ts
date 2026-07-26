@@ -19,7 +19,10 @@ export default defineConfig({
         name: 'Pharmacy in Your Pocket',
         short_name: 'Pharmacy',
         description: 'Every medication you take, in one pocket. Track your NHS, private and over-the-counter medicines, spot potential interactions, and share a clear summary with your GP.',
-        theme_color: '#12A594',
+        // Matches background_color and the <meta name="theme-color"> in
+        // index.html. These three used to disagree, so an installed PWA showed
+        // a teal splash opening into a cream app.
+        theme_color: '#F7F7F4',
         background_color: '#F7F7F4',
         display: 'standalone',
         orientation: 'portrait',
