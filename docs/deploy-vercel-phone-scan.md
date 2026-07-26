@@ -46,8 +46,17 @@ Update `.env`:
 
 Set `MEDDATA_API_KEY`, `OPENFDA_API_KEY`, optional `APP_DATABASE_URL`, and `PUBLIC_BASE_URL` to your service URL. Or run `RENDER_API_KEY=… RENDER_OWNER_ID=… python backend/scripts/render_bootstrap.py` locally.
 
+### Render free tier: cold starts and keep-warm
 
-Quick tunnel (**recommended for demos** — ngrok):
+On Render **free** web services, the instance **sleeps after ~15 minutes** without traffic. The next request (e.g. [pocketary.vercel.app/interactions](https://pocketary.vercel.app/interactions) calling `POST /interactions/check`) can take **30–60+ seconds** while the service wakes.
+
+**Keep warm (demos):** [`.github/workflows/render-keep-warm.yml`](../.github/workflows/render-keep-warm.yml) runs every **10 minutes** on `main` and `GET`s `https://pocketary-api.onrender.com/health`. Optional repo variable **`RENDER_HEALTH_URL`** overrides that URL. You can also run the workflow manually: GitHub → Actions → **Render keep warm** → **Run workflow**.
+
+Before a live demo: open `https://pocketary-api.onrender.com/health` once, or trigger the workflow. For 24/7 external monitoring, a free [UptimeRobot](https://uptimerobot.com) check on the same URL (5 min interval) works too.
+
+Keep-warm is for **cloud demos** only — local dev uses `uvicorn` on your laptop and does not need it.
+
+Quick tunnel (**laptop API only** — ngrok):
 
 ```bash
 ngrok http 8000

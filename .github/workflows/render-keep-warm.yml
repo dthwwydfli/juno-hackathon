@@ -1,0 +1,25 @@
+# Ping Render free-tier API before ~15 min idle sleep (cold starts hurt /interactions on Vercel).
+name: Render keep warm
+
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: render-keep-warm
+  cancel-in-progress: false
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: GET /health
+        env:
+          RENDER_HEALTH_URL: ${{ vars.RENDER_HEALTH_URL }}
+        run: |
+          URL="${RENDER_HEALTH_URL:-https://pocketary-api.onrender.com/health}"
+          echo "Pinging ${URL}"
+          curl -fsS --max-time 90 "${URL}" | head -c 500
+          echo
