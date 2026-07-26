@@ -8,9 +8,14 @@ ENV_FILE="$ROOT/backend/.env"
 
 cd "$ROOT/frontend"
 printf '%s' "$API_URL" | vercel env add VITE_API_BASE_URL production --force
-printf '%s' "$API_URL" | vercel env add VITE_API_BASE_URL preview --force
+vercel env add VITE_API_BASE_URL preview --value "$API_URL" --yes --force 2>/dev/null || \
+  printf '%s' "$API_URL" | vercel env add VITE_API_BASE_URL preview --force
 printf '%s' "demo" | vercel env add VITE_USER_ID production --force 2>/dev/null || true
 printf '%s' "https://pocketary.vercel.app" | vercel env add VITE_PUBLIC_APP_ORIGIN production --force 2>/dev/null || true
+
+# GP PDFs must load from the same host that created the token (defaults to VITE_API_BASE_URL).
+vercel env rm VITE_PUBLIC_PDF_ORIGIN production --yes 2>/dev/null || true
+vercel env rm VITE_PUBLIC_PDF_ORIGIN preview --yes 2>/dev/null || true
 
 vercel --prod --yes
 

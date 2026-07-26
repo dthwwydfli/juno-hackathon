@@ -130,7 +130,7 @@ def summary_pdf(token: str, db: Session = Depends(get_db)):
         content=pdf_bytes,
         media_type="application/pdf",
         headers={
-            "Content-Disposition": f'inline; filename="medication-summary.pdf"'
+            "Content-Disposition": 'inline; filename="medication-summary.pdf"'
         },
     )
 

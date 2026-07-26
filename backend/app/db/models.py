@@ -5,6 +5,7 @@ from sqlalchemy import DateTime, Enum, ForeignKey, String, Text, create_engine
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship, sessionmaker
 
 from app.config import settings
+from app.time_util import utc_now
 
 
 class Base(DeclarativeBase):
@@ -33,7 +34,7 @@ class Medication(Base):
     schedule: Mapped[str] = mapped_column(Text, default="{}")
     started_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     archived_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now)
 
 
 def app_db_backend() -> str:
@@ -82,7 +83,7 @@ class InteractionRecord(Base):
     summary: Mapped[str] = mapped_column(Text)
     full_text: Mapped[str] = mapped_column(Text)
     sources: Mapped[str] = mapped_column(Text, default="[]")
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now)
 
     med_a: Mapped["Medication"] = relationship(
         foreign_keys=[med_a_id], lazy="joined"
@@ -104,7 +105,7 @@ class ApiCacheEntry(Base):
     provider: Mapped[str] = mapped_column(String(32), index=True)
     cache_key: Mapped[str] = mapped_column(String(128), unique=True, index=True)
     payload: Mapped[str] = mapped_column(Text)
-    fetched_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    fetched_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now)
 
 
 class ProviderState(Base):
@@ -116,7 +117,7 @@ class ProviderState(Base):
     status: Mapped[str] = mapped_column(String(32), default="ok")
     blocked_until: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     detail: Mapped[str | None] = mapped_column(Text, nullable=True)
-    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now)
 
 
 class GpShareToken(Base):
@@ -128,7 +129,7 @@ class GpShareToken(Base):
     patient_label: Mapped[str | None] = mapped_column(String(256), nullable=True)
     snapshot_json: Mapped[str | None] = mapped_column(Text, nullable=True)
     expires_at: Mapped[datetime] = mapped_column(DateTime)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now)
 
 
 def init_app_db() -> None:

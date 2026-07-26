@@ -261,7 +261,10 @@ async def check_interactions_for_user(
     )
     if medication_ids:
         q = q.filter(Medication.id.in_(medication_ids))
-    db_meds = q.all()
+    # Explicit ordering: Postgres returns unordered rows in whatever order the
+    # heap happens to hold them, and that order decides which way round every
+    # pair comes out of itertools.combinations below.
+    db_meds = q.order_by(Medication.id).all()
     meds = _merge_pending_meds(db_meds, pending_meds or [])
 
     sources: dict[str, str] = {"meddata": "ok", "suppai": "skipped"}
@@ -377,21 +380,27 @@ def _upsert_record(
     full_text: str,
     sources: str,
 ) -> InteractionRecord:
-    """One row per (user, pair). Previously every check inserted duplicates."""
+    """One row per (user, pair). Previously every check inserted duplicates.
+
+    The stored key is order-independent: a pair reaching this function as
+    (9, 7) must find the row written earlier as (7, 9), or the check produces a
+    second record and the app shows the interaction twice.
+    """
+    low, high = min(med_a_id, med_b_id), max(med_a_id, med_b_id)
     rec = (
         db.query(InteractionRecord)
         .filter(
             InteractionRecord.user_id == user_id,
-            InteractionRecord.med_a_id == med_a_id,
-            InteractionRecord.med_b_id == med_b_id,
+            InteractionRecord.med_a_id == low,
+            InteractionRecord.med_b_id == high,
         )
         .first()
     )
     if rec is None:
         rec = InteractionRecord(
             user_id=user_id,
-            med_a_id=med_a_id,
-            med_b_id=med_b_id,
+            med_a_id=low,
+            med_b_id=high,
             severity=severity,
             summary=summary,
             full_text=full_text,

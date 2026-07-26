@@ -209,3 +209,63 @@ def test_merge_pending_includes_unsaved_med_in_check_set():
     assert len(merged) == 2
     assert any(m.display_name == "Clopidogrel 75" for m in merged)
     assert merged[1].id < 0
+
+
+def test_upsert_record_is_order_independent():
+    """A pair arriving as (b, a) must update the row written as (a, b).
+
+    Postgres returns unordered rows in whatever order the heap holds them, so
+    the same pair can reach _upsert_record either way round between checks.
+    Keying on the raw order inserted a second record and the app showed the
+    interaction twice.
+    """
+    from app.db.models import Base, InteractionRecord, MedCategory, Medication, SessionLocal, engine
+    from app.services.interactions import _upsert_record
+
+    Base.metadata.create_all(bind=engine)
+    user = "order-test-user"
+    with SessionLocal() as db:
+        db.query(InteractionRecord).filter(InteractionRecord.user_id == user).delete()
+        db.query(Medication).filter(Medication.user_id == user).delete()
+        meds = [
+            Medication(
+                user_id=user,
+                display_name=name,
+                category=MedCategory.otc,
+                dosage="As directed",
+                schedule="{}",
+            )
+            for name in ("Aspirin 75mg", "Ibuprofen 200mg")
+        ]
+        db.add_all(meds)
+        db.commit()
+        a_id, b_id = meds[0].id, meds[1].id
+
+        first = _upsert_record(
+            db,
+            user_id=user,
+            med_a_id=a_id,
+            med_b_id=b_id,
+            severity="moderate",
+            summary="first pass",
+            full_text="first",
+            sources="[]",
+        )
+        second = _upsert_record(
+            db,
+            user_id=user,
+            med_a_id=b_id,
+            med_b_id=a_id,
+            severity="moderate",
+            summary="second pass",
+            full_text="second",
+            sources="[]",
+        )
+        db.commit()
+
+        assert second.id == first.id
+        assert second.summary == "second pass"
+        assert (
+            db.query(InteractionRecord).filter(InteractionRecord.user_id == user).count()
+            == 1
+        )

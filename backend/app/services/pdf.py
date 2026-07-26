@@ -9,6 +9,7 @@ from reportlab.pdfgen import canvas
 from app.db.models import MedCategory, Medication
 from app.schemas.gp_snapshot import GpShareSnapshot
 from app.services.gp_summary import strip_severity_tags
+from app.time_util import utc_now
 
 TEAL = colors.HexColor("#12A594")
 AMBER = colors.HexColor("#C7791F")
@@ -66,7 +67,7 @@ def build_gp_pdf(
         age=0,
         gender="",
         nhs_number="",
-        generated=datetime.utcnow().strftime("%d %b %Y, %H:%M"),
+        generated=utc_now().strftime("%d %b %Y, %H:%M"),
         active=active_rows,
         archived=archived_rows,
         interactions=interactions,
