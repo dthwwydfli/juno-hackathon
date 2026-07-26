@@ -112,6 +112,18 @@
   opacity: .5;
 }
 
+.home-ix-banner.home-ix-loading {
+  background: var(--surface-2, #f4f4f5);
+  color: var(--ink-secondary, #52525b);
+  align-items: center;
+}
+.home-ix-loading .spin {
+  animation: home-ix-spin 0.9s linear infinite;
+  flex-shrink: 0;
+}
+@keyframes home-ix-spin {
+  to { transform: rotate(360deg); }
+}
 .home-ix-banner {
   margin: 0 var(--gutter) 10px;
   padding: 12px 14px;

@@ -32,10 +32,24 @@ export function Home() {
   const { ref: scrollRef, condensed } = useCondense();
 
   useEffect(() => {
+    let cancelled = false;
+    setIxTick((t) => t + 1);
     void refreshInteractions(state.medications)
-      .then(() => setIxTick((t) => t + 1))
-      .catch(() => setIxTick((t) => t + 1));
+      .then(() => {
+        if (!cancelled) setIxTick((t) => t + 1);
+      })
+      .catch(() => {
+        if (!cancelled) setIxTick((t) => t + 1);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [state.medications]);
+
+  const ixLoading = useMemo(() => {
+    void ixTick;
+    return getLiveRefreshState() === 'loading';
+  }, [ixTick, state.medications]);
 
   const flagged = useMemo(
     () => flaggedMedNames(state.medications),
@@ -111,7 +125,14 @@ export function Home() {
         </div>
       </div>
 
-      {ixNotice && (
+      {ixLoading && (
+        <div className="home-ix-banner home-ix-loading" role="status">
+          <Icon name="sync" size={17} strokeWidth={2} className="spin" />
+          <span>Checking interactions…</span>
+        </div>
+      )}
+
+      {!ixLoading && ixNotice && (
         <div className="home-ix-banner" role="status">
           <Icon name="warning" size={17} strokeWidth={2} />
           <div>

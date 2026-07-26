@@ -12,6 +12,7 @@ import { checkApiHealth, formatApiReachabilityError } from '../../lib/api';
 import {
   cabinetSyncKey,
   gpPdfUrlForToken,
+  gpSharePageUrlForToken,
   prepareGpShare,
 } from '../../lib/sync-cabinet';
 import type { Category, Medication } from '../../data/types';
@@ -55,6 +56,7 @@ export function Share() {
 
   const [qrUrl, setQrUrl] = useState<string>('');
   const [pdfUrl, setPdfUrl] = useState<string>('');
+  const [sharePageUrl, setSharePageUrl] = useState<string>('');
   const [pdfPreviewUrl, setPdfPreviewUrl] = useState<string>('');
   const [shareErr, setShareErr] = useState<string>('');
   const [gpLinkErr, setGpLinkErr] = useState<string>('');
@@ -97,6 +99,7 @@ export function Share() {
     setShareLoading(true);
     setQrUrl('');
     setPdfUrl('');
+    setSharePageUrl('');
     setLinkFeedback('');
     (async () => {
       try {
@@ -108,11 +111,13 @@ export function Share() {
           state.profile.name,
           snapshot,
         );
-        const url = gpPdfUrlForToken(tokenRes.token);
+        const pdfApiUrl = gpPdfUrlForToken(tokenRes.token);
+        const pageUrl = gpSharePageUrlForToken(tokenRes.token);
         if (!live) return;
-        setPdfUrl(url);
+        setPdfUrl(pdfApiUrl);
+        setSharePageUrl(pageUrl);
         setExpiryLabel(formatExpiryLabel(tokenRes.expires_at));
-        const qr = await qrDataUrl(url, { size: 320 });
+        const qr = await qrDataUrl(pageUrl, { size: 320, errorCorrectionLevel: 'H' });
         if (live) setQrUrl(qr);
       } catch (e) {
         if (live) setShareErr(formatApiReachabilityError(e));
@@ -139,12 +144,14 @@ export function Share() {
           state.profile.name,
           snapshot,
         );
-        const url = gpPdfUrlForToken(tokenRes.token);
+        const pdfApiUrl = gpPdfUrlForToken(tokenRes.token);
+        const pageUrl = gpSharePageUrlForToken(tokenRes.token);
         if (!live) return;
-        setPdfUrl(url);
+        setPdfUrl(pdfApiUrl);
+        setSharePageUrl(pageUrl);
         setExpiryLabel(formatExpiryLabel(tokenRes.expires_at));
         try {
-          const backendBlob = await pdfPreviewObjectUrl(url);
+          const backendBlob = await pdfPreviewObjectUrl(pdfApiUrl);
           if (live) {
             setPdfPreviewUrl((prev) => {
               if (prev) URL.revokeObjectURL(prev);
@@ -178,8 +185,9 @@ export function Share() {
   };
 
   const shareLink = async () => {
-    if (pdfUrl) {
-      const mode = await sharePdfLink(pdfUrl);
+    const link = sharePageUrl || pdfUrl;
+    if (link) {
+      const mode = await sharePdfLink(link);
       setLinkFeedback(mode === 'shared' ? 'Link shared' : 'Link copied to clipboard');
       return;
     }
@@ -276,9 +284,9 @@ export function Share() {
               {expiryLabel || 'Creating a time-limited link…'}
             </div>
             {linkFeedback && <div className="shr-expiry">{linkFeedback}</div>}
-            {pdfUrl && (
+            {(sharePageUrl || pdfUrl) && (
               <div className="shr-expiry shr-qr-link">
-                Opens: {pdfUrl.replace(/^https?:\/\//, '')}
+                Opens: {(sharePageUrl || pdfUrl).replace(/^https?:\/\//, '')}
               </div>
             )}
           </div>

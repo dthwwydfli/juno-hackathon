@@ -1,11 +1,12 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { PhoneFrame, StatusBar, SubHeader } from '../../components/Frame';
 import { Icon } from '../../components/Icon';
 import { PillGlyph } from '../../components/PillGlyph';
 import { useActiveMeds } from '../../data/store';
 import { getInteractionById } from '../../lib/interactions';
-import type { Category, MedForm } from '../../data/types';
+import { fetchInteractionDetail } from '../../lib/interactions-live';
+import type { Category, MedForm, Interaction } from '../../data/types';
 import './readmore.css';
 
 function Swap({ size = 24 }: { size?: number }) {
@@ -64,7 +65,33 @@ export function ReadMore() {
   const { id } = useParams();
   const nav = useNavigate();
   const active = useActiveMeds();
-  const it = id ? getInteractionById(id) : undefined;
+  const cached = id ? getInteractionById(id) : undefined;
+  const [it, setIt] = useState<Interaction | undefined>(cached);
+
+  useEffect(() => {
+    setIt(cached);
+  }, [cached]);
+
+  useEffect(() => {
+    if (!cached?.backendId) return;
+    let live = true;
+    void fetchInteractionDetail(cached.backendId).then(({ detail, source }) => {
+      if (!live || !detail) return;
+      setIt((prev) =>
+        prev
+          ? {
+              ...prev,
+              detail,
+              source: source || prev.source,
+              affects: prev.affects,
+            }
+          : prev,
+      );
+    });
+    return () => {
+      live = false;
+    };
+  }, [cached?.backendId, cached?.id]);
 
   const info = useMemo(() => {
     const map = new Map<string, { brand: string; form: MedForm }>();

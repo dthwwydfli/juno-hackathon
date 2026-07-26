@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { Routes, Route, matchPath, useLocation } from 'react-router-dom';
 import { AnimatePresence, motion, useIsPresent, useReducedMotion } from 'motion/react';
 import { PhoneShell } from './components/Frame';
 import { useNavDirection } from './lib/nav-stack';
@@ -14,6 +14,8 @@ import { Share } from './screens/share/Share';
 import { Settings } from './screens/settings/Settings';
 import { NhsConnection } from './screens/nhs-connection/NhsConnection';
 import { Archive } from './screens/archive/Archive';
+import { GpShareView } from './screens/gp/GpShareView';
+import { NotFound } from './screens/not-found/NotFound';
 
 /** Push slides in from the right; pop slides back out with the iOS parallax —
  *  the outgoing screen drifts only 28%, not a full width, which is what makes
@@ -74,15 +76,44 @@ function ScreenStack() {
           <Route path="/settings" element={<Settings />} />
           <Route path="/settings/nhs" element={<NhsConnection />} />
           <Route path="/archive" element={<Archive />} />
-          <Route path="*" element={<Navigate to="/" replace />} />
+          <Route path="*" element={<NotFound />} />
         </Routes>
       </ScreenLayer>
     </AnimatePresence>
   );
 }
 
+function gpTokenFromSearch(search: string): string | undefined {
+  const fromRouter = new URLSearchParams(search).get('gp')?.trim();
+  if (fromRouter) return fromRouter;
+  if (typeof window !== 'undefined') {
+    return new URLSearchParams(window.location.search).get('gp')?.trim() ?? undefined;
+  }
+  return undefined;
+}
+
 export default function App() {
   const location = useLocation();
+  const gpFromQuery = gpTokenFromSearch(location.search);
+  if (location.pathname === '/' && gpFromQuery) {
+    return (
+      <PhoneShell>
+        <GpShareView />
+      </PhoneShell>
+    );
+  }
+
+  const gpMatch = matchPath({ path: '/gp/:token', end: true }, location.pathname);
+  if (gpMatch) {
+    return (
+      <PhoneShell>
+        <Routes>
+          <Route path="/gp/:token" element={<GpShareView />} />
+        </Routes>
+      </PhoneShell>
+    );
+  }
+
   // Landing is a full-width marketing page with no phone frame, so it sits
   // outside both the shell and the stack.
   if (location.pathname === '/') return <Landing />;
