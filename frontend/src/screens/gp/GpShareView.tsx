@@ -62,6 +62,12 @@ export function GpShareView() {
           throw new ApiError('This link is invalid or has expired.', 404);
         }
         if (!res.ok) {
+          if (res.status >= 500) {
+            throw new ApiError(
+              'Server error loading summary. Check that the backend is running and review its logs.',
+              res.status,
+            );
+          }
           throw new ApiError('Could not load medication summary.', res.status);
         }
         const blob = await res.blob();

@@ -1,0 +1,36 @@
+# Render Blueprint — repo root (Render reads this path on "New Blueprint").
+# After deploy: set secret env vars in the dashboard, then set Vercel VITE_API_BASE_URL to the service URL.
+services:
+  - type: web
+    name: pocketary-api
+    runtime: docker
+    rootDir: backend
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    plan: free
+    healthCheckPath: /health
+    envVars:
+      - key: SEED_DEMO_ON_START
+        value: "1"
+      - key: CORS_ORIGINS
+        value: https://pocketary.vercel.app,http://localhost:5173
+      - key: DMD_DB_PATH
+        value: /app/data/dmd.sqlite
+      - key: APP_DB_PATH
+        value: /app/data/app.sqlite
+      - key: GP_TOKEN_TTL_HOURS
+        value: "48"
+      - key: PUBLIC_BASE_URL
+        sync: false
+      - key: APP_DATABASE_URL
+        sync: false
+      - key: MEDDATA_API_KEY
+        sync: false
+      - key: MEDDATA_BASE_URL
+        value: https://meddata.anthesia.io
+      - key: OPENFDA_API_KEY
+        sync: false
+      - key: TRUD_API_KEY
+        sync: false
+      - key: TRUD_DMD_ITEM_ID
+        sync: false

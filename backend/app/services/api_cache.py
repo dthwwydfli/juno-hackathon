@@ -8,10 +8,11 @@ from __future__ import annotations
 
 import hashlib
 import json
-from datetime import datetime, timedelta
+from datetime import timedelta
 from typing import Any
 
 from app.db.models import ApiCacheEntry, ProviderState, SessionLocal
+from app.time_util import as_utc_aware, utc_now
 
 
 def fingerprint(provider: str, parts: list[str]) -> str:
@@ -30,7 +31,7 @@ def read_cache(provider: str, key: str, ttl_hours: int) -> Any | None:
         )
         if not row:
             return None
-        if datetime.utcnow() - row.fetched_at > timedelta(hours=ttl_hours):
+        if utc_now() - as_utc_aware(row.fetched_at) > timedelta(hours=ttl_hours):
             db.delete(row)
             db.commit()
             return None
@@ -46,28 +47,28 @@ def write_cache(provider: str, key: str, payload: Any) -> None:
         row = db.query(ApiCacheEntry).filter(ApiCacheEntry.cache_key == key).first()
         if row:
             row.payload = json.dumps(payload)
-            row.fetched_at = datetime.utcnow()
+            row.fetched_at = utc_now()
         else:
             db.add(
                 ApiCacheEntry(
                     provider=provider,
                     cache_key=key,
                     payload=json.dumps(payload),
-                    fetched_at=datetime.utcnow(),
+                    fetched_at=utc_now(),
                 )
             )
         db.commit()
 
 
 def block_provider(provider: str, hours: int, status: str, detail: str = "") -> None:
-    until = datetime.utcnow() + timedelta(hours=hours)
+    until = utc_now() + timedelta(hours=hours)
     with SessionLocal() as db:
         row = db.get(ProviderState, provider)
         if row:
             row.status = status
             row.blocked_until = until
             row.detail = detail or None
-            row.updated_at = datetime.utcnow()
+            row.updated_at = utc_now()
         else:
             db.add(
                 ProviderState(
@@ -75,7 +76,7 @@ def block_provider(provider: str, hours: int, status: str, detail: str = "") -> 
                     status=status,
                     blocked_until=until,
                     detail=detail or None,
-                    updated_at=datetime.utcnow(),
+                    updated_at=utc_now(),
                 )
             )
         db.commit()
@@ -88,7 +89,7 @@ def clear_provider_block(provider: str) -> None:
             row.status = "ok"
             row.blocked_until = None
             row.detail = None
-            row.updated_at = datetime.utcnow()
+            row.updated_at = utc_now()
             db.commit()
 
 
@@ -98,7 +99,7 @@ def provider_block(provider: str) -> tuple[str, str] | None:
         row = db.get(ProviderState, provider)
         if not row or not row.blocked_until:
             return None
-        if datetime.utcnow() >= row.blocked_until:
+        if utc_now() >= as_utc_aware(row.blocked_until):
             row.status = "ok"
             row.blocked_until = None
             row.detail = None
