@@ -72,10 +72,35 @@ export function mapDmdToFields(row: DmdLookupResult): MappedLookupFields {
   };
 }
 
+/** FNC1 group separator, plus the AIM symbology identifier some readers prefix. The control
+ *  characters are the point here — GS1 delimits variable-length fields with GS (U+001D). */
+// eslint-disable-next-line no-control-regex
+const GS1_SEPARATORS = /[\u001d\u001e\u0004]/g;
+const AIM_IDENTIFIER = /^\][A-Za-z]\d/;
+/** Application identifier 01 carries the GTIN-14 in a GS1 element string. */
+// eslint-disable-next-line no-control-regex
+const GS1_GTIN = /(?:^|[\u001d\u001e\u0004])01(\d{14})/;
+
+/** Normalise a raw scan to something `/lookup/barcode` can resolve.
+ *
+ *  EAN-13 / UPC / ITF-14 come back as bare digits and pass through untouched — the backend
+ *  already matches on both the raw code and its zero-padded GTIN-14 form. A DataMatrix or
+ *  GS1-128 on an FMD pack instead returns an element string like
+ *  `010506061234567817260131101A2B3C`, where only the 14 digits after AI `01` are the GTIN;
+ *  posting the whole string would always 404. */
+export function gtinFromScan(raw: string): string {
+  let text = raw.trim();
+  if (AIM_IDENTIFIER.test(text)) text = text.slice(3);
+  if (/^\d+$/.test(text) && [8, 12, 13, 14].includes(text.length)) return text;
+  const match = GS1_GTIN.exec(text);
+  if (match) return match[1];
+  return text.replace(GS1_SEPARATORS, '');
+}
+
 export async function lookupBarcode(code: string): Promise<MappedLookupFields> {
   const row = await apiFetch<DmdLookupResult>('/lookup/barcode', {
     method: 'POST',
-    body: JSON.stringify({ code: code.trim(), code_type: 'gtin' }),
+    body: JSON.stringify({ code: gtinFromScan(code), code_type: 'gtin' }),
   });
   return mapDmdToFields(row);
 }

@@ -1,5 +1,6 @@
 import { jsPDF } from 'jspdf';
 import type { AppState, Interaction } from '../data/types';
+import { fetchApiUrl } from './api';
 import { checkInteractions } from './interactions';
 
 export interface ShareSnapshot {
@@ -182,7 +183,7 @@ export async function downloadPdfFromUrl(
   url: string,
   filename = 'medication-summary.pdf',
 ): Promise<void> {
-  const res = await fetch(url);
+  const res = await fetchApiUrl(url);
   if (!res.ok) throw new Error('Could not download PDF');
   const blob = await res.blob();
   const objectUrl = URL.createObjectURL(blob);
@@ -197,7 +198,7 @@ export async function downloadPdfFromUrl(
 
 /** Fetch PDF bytes and return a blob URL suitable for iframe preview on iOS. */
 export async function pdfPreviewObjectUrl(url: string): Promise<string> {
-  const res = await fetch(url);
+  const res = await fetchApiUrl(url);
   if (!res.ok) throw new Error('Could not load PDF preview');
   const blob = await res.blob();
   return URL.createObjectURL(blob);

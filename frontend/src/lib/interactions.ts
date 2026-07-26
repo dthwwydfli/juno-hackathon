@@ -19,14 +19,22 @@ import {
   type LiveCheckOptions,
   type SourcesStatus,
 } from './interactions-live';
+import { interactionCabinetFingerprint } from './sync-cabinet';
 
 const norm = (s: string) => s.trim().toLowerCase();
 
 function medsCacheKey(meds: Medication[]): string {
-  return meds
-    .map((m) => `${m.id}:${m.status}:${m.name}:${m.dose}`)
-    .sort()
-    .join('|');
+  return interactionCabinetFingerprint(meds);
+}
+
+const FRESH_CHECK_MS = 60_000;
+let lastFreshCheckAt = 0;
+let lastFreshCheckKey = '';
+
+/** Call after a trusted live check (e.g. add-flow save) to skip redundant Home refresh. */
+export function markInteractionCheckFresh(meds: Medication[]): void {
+  lastFreshCheckAt = Date.now();
+  lastFreshCheckKey = medsCacheKey(meds);
 }
 
 let inflight: Promise<Interaction[]> | null = null;
@@ -43,13 +51,22 @@ export class InteractionCheckIncompleteError extends Error {
   }
 }
 
-/** Sync read from last successful backend refresh. No demo fixture fallback. */
-export function checkInteractions(meds: Medication[]): Interaction[] {
-  const state = getLiveRefreshState();
-  if (state !== 'ready') return [];
-  const cached = getCachedInteractions();
+function filterInteractionsForCabinet(meds: Medication[], cached: Interaction[]): Interaction[] {
   const present = new Set(meds.filter((m) => m.status === 'active').map((m) => norm(m.name)));
   return cached.filter((rule) => present.has(norm(rule.a)) && present.has(norm(rule.b)));
+}
+
+/** Sync read from last successful backend refresh. No demo fixture fallback. */
+export function checkInteractions(meds: Medication[]): Interaction[] {
+  const refreshState = getLiveRefreshState();
+  const cached = getCachedInteractions();
+  if (refreshState === 'error') {
+    return cached.length ? filterInteractionsForCabinet(meds, cached) : [];
+  }
+  if (refreshState !== 'ready' && refreshState !== 'loading') {
+    return [];
+  }
+  return filterInteractionsForCabinet(meds, cached);
 }
 
 export function getInteractionRefreshError(): string | null {
@@ -108,6 +125,23 @@ function applyRefreshResult(
   return list;
 }
 
+function shouldUseCachedRefresh(meds: Medication[], opts?: RefreshInteractionsOptions): boolean {
+  if (opts?.force) return false;
+  const key = medsCacheKey(meds);
+  if (getLiveRefreshState() === 'ready' && getInteractionCacheKey() === key) {
+    return true;
+  }
+  const now = Date.now();
+  if (
+    getLiveRefreshState() === 'ready' &&
+    now - lastFreshCheckAt < FRESH_CHECK_MS &&
+    key === lastFreshCheckKey
+  ) {
+    return true;
+  }
+  return false;
+}
+
 export async function refreshInteractions(
   meds: Medication[],
   opts?: RefreshInteractionsOptions,
@@ -115,9 +149,7 @@ export async function refreshInteractions(
   const key = medsCacheKey(meds);
   if (inflight && inflightKey === key) return inflight;
 
-  // Every screen refreshes on mount. Without this the same cabinet is re-checked
-  // on each navigation, and MedData is metered, so repeats cost real quota.
-  if (!opts?.force && getLiveRefreshState() === 'ready' && getInteractionCacheKey() === key) {
+  if (shouldUseCachedRefresh(meds, opts)) {
     return getCachedInteractions();
   }
 
@@ -125,7 +157,10 @@ export async function refreshInteractions(
   setLiveRefreshState('loading', null);
 
   inflight = checkInteractionsLive(meds, { onProgress: opts?.onProgress })
-    .then((result) => applyRefreshResult(key, result.interactions, result.sources, opts))
+    .then((result) => {
+      markInteractionCheckFresh(meds);
+      return applyRefreshResult(key, result.interactions, result.sources, opts);
+    })
     .catch((e) => {
       const msg = formatApiReachabilityError(e);
       const prev = getCachedInteractions();
