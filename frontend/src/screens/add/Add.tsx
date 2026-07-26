@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import type { CSSProperties } from 'react';
 import { BrowserMultiFormatReader } from '@zxing/library';
 import { useNavigate, useParams } from 'react-router-dom';
 import { PhoneFrame, StatusBar, SubHeader, Sheet } from '../../components/Frame';
@@ -6,13 +7,14 @@ import { Icon, iconForRoute } from '../../components/Icon';
 import { SelectField, ChipGroup } from '../../components/form/Form';
 import { TextField } from '../../components/form/Form';
 import { useStore } from '../../data/store';
-import { interactionsForAsync } from '../../lib/interactions';
+import { interactionsForAsync, InteractionCheckIncompleteError } from '../../lib/interactions';
 import { getInteractionById } from '../../lib/interactions';
-import { ApiError, apiFetch } from '../../lib/api';
+import { ApiError, apiFetch, formatApiReachabilityError } from '../../lib/api';
 import { lookupBarcode } from '../../lib/dmd-map';
 import { fmtDate, todayISO, addDays } from '../../lib/dates';
 import type { Category, DoseRow, Interaction, MedForm, Medication } from '../../data/types';
-import { Warning } from '../warning/Warning';
+import { AddClearCheck } from './AddClearCheck';
+import { AddInteractionResult } from './AddInteractionResult';
 import './add.css';
 
 type Mode = 'manual' | 'camera' | 'scan' | 'filled';
@@ -58,7 +60,8 @@ function parseTime(t: string): { h: string; m: string; ap: string } {
   return { h: '10', m: '30', ap: 'AM' };
 }
 
-interface WarnData { newMed: Medication; existing?: Medication; interaction: Interaction }
+interface WarnData { newMed: Medication; existing?: Medication; interaction: Interaction; isEdit?: boolean; extraCount?: number }
+interface ClearCheckData { med: Medication; isEdit?: boolean; cabinetCount: number }
 
 // Optional dev aid: /add?state=camera|scan|filled|time|warning to preview internal states.
 function readInitial(): string | null {
@@ -125,6 +128,9 @@ export function Add() {
   const [dmdCodes, setDmdCodes] = useState(editMed?.dmdCodes);
   const [gtinInput, setGtinInput] = useState('');
   const [lookupErr, setLookupErr] = useState('');
+  const [saveChecking, setSaveChecking] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [clearCheck, setClearCheck] = useState<ClearCheckData | null>(null);
 
   const [scanLine1, setScanLine1] = useState('Scanning…');
   const [scanLine2, setScanLine2] = useState('');
@@ -290,29 +296,88 @@ export function Add() {
   };
 
   const onSave = async () => {
-    if (!canSave) return;
+    if (!canSave || saveChecking) return;
     const med = buildMed();
-    if (editing) {
-      store.updateMedication(med);
+    const others = state.medications.filter((m) => m.id !== med.id && m.status === 'active');
+    if (!others.length) {
+      if (editing) store.updateMedication(med);
+      else store.addMedication(med);
       nav('/home');
       return;
     }
-    const found = await interactionsForAsync(med, state.medications);
-    if (found.length) {
-      const interaction = found[0];
-      const otherName = interaction.a.toLowerCase() === med.name.toLowerCase() ? interaction.b : interaction.a;
-      const existing = state.medications.find(
-        (m) => m.name.toLowerCase() === otherName.toLowerCase() && m.status === 'active',
-      );
-      setWarn({ newMed: med, existing, interaction });
-    } else {
-      store.addMedication(med);
-      nav('/home');
+    setSaveChecking(true);
+    setSaveError(null);
+    try {
+      const found = await interactionsForAsync(med, state.medications);
+      if (found.length) {
+        const interaction = found[0];
+        const otherName = interaction.a.toLowerCase() === med.name.toLowerCase() ? interaction.b : interaction.a;
+        const existing = state.medications.find(
+          (m) => m.name.toLowerCase() === otherName.toLowerCase() && m.status === 'active',
+        );
+        setClearCheck(null);
+        setWarn({
+          newMed: med,
+          existing,
+          interaction,
+          isEdit: editing,
+          extraCount: Math.max(0, found.length - 1),
+        });
+      } else {
+        setWarn(null);
+        const activeCount = state.medications.filter((m) => m.status === 'active').length;
+        const cabinetCount = editing ? activeCount : activeCount + 1;
+        setClearCheck({ med, isEdit: editing, cabinetCount });
+      }
+    } catch (e) {
+      if (e instanceof InteractionCheckIncompleteError) {
+        setSaveError(e.reason);
+      } else {
+        setSaveError(formatApiReachabilityError(e));
+      }
+    } finally {
+      setSaveChecking(false);
     }
   };
 
   const goManual = () => setMode(scanned ? 'filled' : 'manual');
   const screenTitle = editing ? 'Edit medication' : 'Add medication';
+
+  const persistWarnMed = (data: WarnData) => {
+    if (data.isEdit) store.updateMedication(data.newMed);
+    else store.addMedication(data.newMed);
+  };
+
+  if (warn) {
+    return (
+      <AddInteractionResult
+        newMed={warn.newMed}
+        existing={warn.existing}
+        interaction={warn.interaction}
+        extraCount={warn.extraCount}
+        onBack={() => setWarn(null)}
+        onReadMore={() => {
+          persistWarnMed(warn);
+          setWarn(null);
+          nav(`/interactions/${warn.interaction.id}`);
+        }}
+        onAddAnyway={() => {
+          persistWarnMed(warn);
+          setWarn(null);
+          nav('/home');
+        }}
+        onViewAll={
+          warn.extraCount && warn.extraCount > 0
+            ? () => {
+                persistWarnMed(warn);
+                setWarn(null);
+                nav('/interactions');
+              }
+            : undefined
+        }
+      />
+    );
+  }
 
   // ---------------- SCAN (dark camera takeover) ----------------
   if (mode === 'scan') {
@@ -347,15 +412,17 @@ export function Add() {
                 opacity: 0.35,
               }}
             />
-            <div className="add-reticle">
+            <div className={`add-reticle${scanLine1 === 'Match found' ? ' matched' : ''}`}>
               <div className="add-corner tl" /><div className="add-corner tr" />
               <div className="add-corner bl" /><div className="add-corner br" />
+              {/* Expanding ring on a dm+d hit — the moment the scan pays off. */}
+              <span className="add-ring" aria-hidden />
             </div>
             <div className="add-scan-hint">Align the barcode within the frame</div>
           </div>
 
           <div className="add-match">
-            <div className="dot"><Icon name="capsule" size={24} strokeWidth={1.7} /></div>
+            <div className="dot"><Icon name="capsule" size={24} strokeWidth={1.6} /></div>
             <div className="mtext">
               <div className="mt1">{scanLine1}</div>
               <div className="mt2">{scanLine2 || ''}</div>
@@ -385,7 +452,11 @@ export function Add() {
 
       {!editing && (
         <div className="segwrap">
-          <div className="segment" role="tablist">
+          <div
+            className="segment"
+            role="tablist"
+            style={{ '--seg-i': isManualLike ? 0 : 1, '--seg-n': 2 } as CSSProperties}
+          >
             <button role="tab" aria-selected={isManualLike} onClick={goManual}>
               <Icon name="edit" size={17} /> Manual
             </button>
@@ -400,7 +471,7 @@ export function Add() {
         <>
           <div className="screen-body">
             <div className="add-camreq">
-              <div className="add-halo"><Icon name="camera" size={52} strokeWidth={1.5} /></div>
+              <div className="add-halo"><Icon name="camera" size={52} strokeWidth={1.6} /></div>
               <h2>Scan your medication</h2>
               <p>Point your camera at the barcode on the packaging. We’ll match it to a known database and fill in the details for you.</p>
               <div className="add-privacy">
@@ -433,7 +504,7 @@ export function Add() {
 
             <div className="add-name-row">
               <div className={`add-photo filled`} title={rows[0]?.route}>
-                <Icon name={iconForRoute(rows[0]?.route)} size={30} strokeWidth={1.7} />
+                <Icon name={iconForRoute(rows[0]?.route)} size={30} strokeWidth={1.6} />
               </div>
               <TextField
                 label="Medication name"
@@ -475,7 +546,7 @@ export function Add() {
                     <div className="add-regrow-head">
                       <span>Dose {i + 1}</span>
                       <button type="button" className="add-removerow" onClick={() => removeRow(i)}>
-                        <Icon name="close" size={13} strokeWidth={2.4} /> Remove
+                        <Icon name="close" size={13} strokeWidth={2} /> Remove
                       </button>
                     </div>
                   )}
@@ -501,7 +572,7 @@ export function Add() {
               ))}
 
               <button type="button" className="add-addrow" onClick={addRow}>
-                <Icon name="plus" size={15} strokeWidth={2.1} /> Add another dose
+                <Icon name="plus" size={15} strokeWidth={2} /> Add another dose
               </button>
             </div>
 
@@ -534,8 +605,20 @@ export function Add() {
           </div>
 
           <div className="add-footer">
-            <button className={`add-cta${canSave ? '' : ' disabled'}`} onClick={onSave}>
-              {editing ? 'Save changes' : 'Save medication'}
+            {saveError && (
+              <div className="add-save-err" role="alert">
+                <Icon name="warning" size={18} strokeWidth={2} />
+                <div>
+                  <strong>Could not verify interactions</strong>
+                  <p>{saveError}</p>
+                </div>
+              </div>
+            )}
+            <button
+              className={`add-cta${canSave && !saveChecking ? '' : ' disabled'}`}
+              onClick={() => void onSave()}
+            >
+              {saveChecking ? 'Checking interactions…' : editing ? 'Save changes' : 'Save medication'}
             </button>
           </div>
         </>
@@ -567,16 +650,21 @@ export function Add() {
         </Sheet>
       )}
 
-      {warn && (
-        <Warning
-          newMed={warn.newMed}
-          existing={warn.existing}
-          interaction={warn.interaction}
-          onClose={() => setWarn(null)}
-          onAddAndReview={() => { store.addMedication(warn.newMed); nav('/interactions'); }}
-          onAddAnyway={() => { store.addMedication(warn.newMed); nav('/home'); }}
+      {clearCheck && (
+        <AddClearCheck
+          med={clearCheck.med}
+          cabinetCount={clearCheck.cabinetCount}
+          isEdit={clearCheck.isEdit}
+          onClose={() => setClearCheck(null)}
+          onConfirm={() => {
+            if (clearCheck.isEdit) store.updateMedication(clearCheck.med);
+            else store.addMedication(clearCheck.med);
+            setClearCheck(null);
+            nav('/home');
+          }}
         />
       )}
+
     </PhoneFrame>
   );
 }

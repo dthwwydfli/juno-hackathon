@@ -107,7 +107,7 @@ export function Onboarding() {
                   <span key={m} className="ob-medchip">
                     {m}
                     <button className="x" aria-label={`Remove ${m}`} onClick={() => removeMed(m)}>
-                      <Icon name="close" size={10} strokeWidth={3} />
+                      <Icon name="close" size={10} strokeWidth={2} />
                     </button>
                   </span>
                 ))}
@@ -127,7 +127,7 @@ export function Onboarding() {
                 </div>
               ) : (
                 <button className="ob-addmed" type="button" onClick={() => setAdding(true)}>
-                  <Icon name="plus" size={17} strokeWidth={2.1} />
+                  <Icon name="plus" size={17} strokeWidth={2} />
                   Add a medication
                 </button>
               )}
@@ -141,7 +141,7 @@ export function Onboarding() {
           <div className="ob-footer">
             <button className="ob-cta" onClick={goToDisclosure}>
               Continue
-              <Icon name="chevron" size={18} strokeWidth={2.1} />
+              <Icon name="chevron" size={18} strokeWidth={2} />
             </button>
             <button className="ob-skiplink" onClick={goToDisclosure}>I&rsquo;ll add my medications later</button>
           </div>
@@ -174,14 +174,14 @@ export function Onboarding() {
                 checked={consent}
                 onChange={(e) => setConsent(e.target.checked)}
               />
-              <span className="ob-box"><Icon name="check" size={15} strokeWidth={2.6} /></span>
+              <span className="ob-box"><Icon name="check" size={15} strokeWidth={2} /></span>
               <span className="ob-ct">I understand my medicine information is sourced from these external services.</span>
             </label>
           </div>
           <div className="ob-footer">
             <button className="ob-cta" disabled={!consent} onClick={finish}>
               Agree &amp; continue
-              <Icon name="chevron" size={18} strokeWidth={2.1} />
+              <Icon name="chevron" size={18} strokeWidth={2} />
             </button>
           </div>
         </div>

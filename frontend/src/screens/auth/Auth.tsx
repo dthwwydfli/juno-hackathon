@@ -9,7 +9,7 @@ type Step = 'signin' | 'faceid';
 function Brand() {
   return (
     <div className="auth-brand">
-      <span className="auth-mark"><Icon name="capsule" size={34} strokeWidth={1.9} /></span>
+      <span className="auth-mark"><Icon name="capsule" size={34} strokeWidth={1.8} /></span>
       <span className="auth-brandname">Pharmacy in Your Pocket</span>
     </div>
   );
@@ -76,7 +76,7 @@ export function Auth() {
           <div className="fid">
             <div className="greeting">Welcome back, Jordan</div>
             <button className="halo" aria-label="Unlock with Face ID" onClick={unlock}>
-              <Icon name="faceid" size={74} strokeWidth={1.5} />
+              <Icon name="faceid" size={74} strokeWidth={1.6} />
             </button>
             <h1>Unlock with Face ID</h1>
             <p>Look at your phone to open your medicines securely.</p>

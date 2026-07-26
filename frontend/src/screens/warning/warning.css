@@ -46,8 +46,8 @@
 .warn-pt { font-size: 11px; color: var(--faint); margin-top: 2px; }
 .warn-newtag {
   position: absolute; top: -8px; left: 10px;
-  font-size: 9.5px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase;
-  background: var(--accent); color: #fff;
+  font-size: var(--fs-micro); font-weight: 700; letter-spacing: .04em; text-transform: uppercase;
+  background: var(--accent-solid); color: var(--on-accent);
   padding: 2px 7px; border-radius: 20px;
 }
 .warn-swap { flex: 0 0 auto; color: var(--amber); display: flex; }
@@ -56,7 +56,7 @@
 .warn-reason {
   width: 100%; margin-top: 14px;
   background: var(--amber-tint);
-  border: 1px solid color-mix(in srgb, var(--amber) 38%, var(--hairline));
+  border: 1px solid var(--amber-line);
   border-radius: 14px;
   padding: 12px 14px;
   font-size: 13px; line-height: 1.5; color: var(--amber-ink);
@@ -72,7 +72,7 @@
 .warn-gpline svg { flex: 0 0 auto; }
 
 .warn-actions { width: 100%; margin-top: 18px; display: flex; flex-direction: column; gap: 10px; }
-.warn-actions .btn { border-radius: 15px; font-size: 16px; font-weight: 700; padding: 15px 0; }
+.warn-actions .btn { border-radius: var(--r-md); font-size: 16px; font-weight: 700; padding: 15px 0; }
 .warn-ghost {
   background: transparent; color: var(--muted);
   border: 1px solid var(--hairline); box-shadow: none;

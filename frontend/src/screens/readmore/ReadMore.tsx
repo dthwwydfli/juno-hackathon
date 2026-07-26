@@ -1,16 +1,16 @@
 import { useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { PhoneFrame, StatusBar, SubHeader } from '../../components/Frame';
-import { Icon, iconForRoute } from '../../components/Icon';
-import type { IconName } from '../../components/Icon';
+import { Icon } from '../../components/Icon';
+import { PillGlyph } from '../../components/PillGlyph';
 import { useActiveMeds } from '../../data/store';
 import { getInteractionById } from '../../lib/interactions';
-import type { Category } from '../../data/types';
+import type { Category, MedForm } from '../../data/types';
 import './readmore.css';
 
 function Swap({ size = 24 }: { size?: number }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.9} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
       <path d="M7 8h11M7 8l3-3M7 8l3 3" />
       <path d="M17 16H6M17 16l-3-3M17 16l-3 3" />
     </svg>
@@ -48,10 +48,10 @@ function affectPath(label: string): React.ReactNode {
   return <circle cx="12" cy="12" r="8" />;
 }
 
-function Pill({ name, brand, category, icon }: { name: string; brand: string; category: Category; icon: IconName }) {
+function Pill({ name, brand, category, form }: { name: string; brand: string; category: Category; form: MedForm }) {
   return (
     <div className="rm-pill">
-      <span className="rm-ic"><Icon name={icon} size={18} /></span>
+      <span className="rm-ic"><PillGlyph name={name} form={form} size={26} /></span>
       <span className="rm-pcol">
         <span className="rm-pn">{name}</span>
         <span className="rm-pt">{brand} · {category}</span>
@@ -67,8 +67,8 @@ export function ReadMore() {
   const it = id ? getInteractionById(id) : undefined;
 
   const info = useMemo(() => {
-    const map = new Map<string, { brand: string; icon: IconName }>();
-    for (const m of active) map.set(m.name.toLowerCase(), { brand: m.brand, icon: iconForRoute(m.route) });
+    const map = new Map<string, { brand: string; form: MedForm }>();
+    for (const m of active) map.set(m.name.toLowerCase(), { brand: m.brand, form: m.form });
     return map;
   }, [active]);
 
@@ -90,7 +90,7 @@ export function ReadMore() {
 
   const pillProps = (medName: string, category: Category) => {
     const meta = info.get(medName.toLowerCase());
-    return { name: medName, brand: meta?.brand ?? medName, category, icon: meta?.icon ?? ('pill' as IconName) };
+    return { name: medName, brand: meta?.brand ?? medName, category, form: meta?.form ?? ('other' as MedForm) };
   };
 
   return (
@@ -126,7 +126,7 @@ export function ReadMore() {
             <div className="rm-affects">
               {it.affects.map((a) => (
                 <span key={a.label} className="rm-affect">
-                  <svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.9} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                  <svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
                     {affectPath(a.label)}
                   </svg>
                   {a.label}
@@ -141,7 +141,7 @@ export function ReadMore() {
             <div className="rm-bullets">
               {it.goodToKnow.map((g, i) => (
                 <div key={i} className="rm-bul">
-                  <span className="rm-bi"><Icon name="check" size={14} strokeWidth={2.2} /></span>
+                  <span className="rm-bi"><Icon name="check" size={14} strokeWidth={2} /></span>
                   {g}
                 </div>
               ))}
@@ -155,7 +155,7 @@ export function ReadMore() {
               <div className="rm-s1">{it.source} medicines information</div>
               <div className="rm-s2">Retrieved via healthcare API · 25 Jul 2026</div>
             </div>
-            <span className="rm-verified"><Icon name="check" size={12} strokeWidth={2.4} /> Verified</span>
+            <span className="rm-verified"><Icon name="check" size={12} strokeWidth={2} /> Verified</span>
           </div>
 
         </div>

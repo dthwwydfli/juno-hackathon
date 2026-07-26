@@ -11,6 +11,7 @@ export function Warning({
   newMed,
   existing,
   interaction,
+  extraCount = 0,
   onAddAndReview,
   onAddAnyway,
   onClose,
@@ -18,6 +19,8 @@ export function Warning({
   newMed: Medication;
   existing?: Medication;
   interaction: Interaction;
+  /** Additional interactions beyond the one shown (same new med). */
+  extraCount?: number;
   onAddAndReview: () => void;
   onAddAnyway: () => void;
   onClose?: () => void;
@@ -35,7 +38,12 @@ export function Warning({
           <Icon name="warning" size={44} strokeWidth={1.8} />
         </div>
         <h2 className="warn-title">Potential interaction</h2>
-        <p className="warn-sub">The medication you just added may interact with one already on your list.</p>
+        <p className="warn-sub">
+          The medication you just added may interact with one already on your list.
+          {extraCount > 0 && (
+            <> {extraCount} other potential interaction{extraCount === 1 ? '' : 's'} also involve this medicine.</>
+          )}
+        </p>
 
         <div className="warn-pair">
           <div className="warn-pill">

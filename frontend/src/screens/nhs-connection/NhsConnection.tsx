@@ -50,19 +50,19 @@ export function NhsConnection() {
               <div className="h1">Connected to your NHS record</div>
               <div className="h2">NHS no. {profile.nhsNumber}</div>
             </div>
-            <span className="conn"><span className="d" /> Linked</span>
+            <span className="conn">Linked</span>
           </div>
 
           {/* sync card */}
           <div className="sync">
             <div className="top">
-              <span className="si"><Icon name="sync" size={22} strokeWidth={1.9} /></span>
+              <span className="si"><Icon name="sync" size={22} strokeWidth={1.8} /></span>
               <div>
                 <div className="s1">Last synced</div>
                 <div className="s2">{state.lastSynced}</div>
               </div>
               <span className="uptodate">
-                <Icon name="check" size={15} strokeWidth={2.2} /> Up to date
+                <Icon name="check" size={15} strokeWidth={2} /> Up to date
               </span>
             </div>
             <button className="syncbtn" type="button" onClick={handleSync} disabled={syncing}>
@@ -80,7 +80,7 @@ export function NhsConnection() {
 
           {/* sync history */}
           <div className="glabel">Sync history</div>
-          <div className="log">
+          <div className="log stagger">
             {syncLog.map((e, i) => (
               <div className={`lrow${i === 0 ? ' now' : ''}`} key={`${e.version}-${e.datetime}`}>
                 <span className="ldot"><span className="c" /></span>

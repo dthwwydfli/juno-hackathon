@@ -18,12 +18,12 @@
   width: 64px;
   height: 64px;
   border-radius: 19px;
-  background: var(--accent);
-  color: #fff;
+  background: var(--accent-solid);
+  color: var(--on-accent);
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 12px 26px -8px color-mix(in srgb, var(--accent) 55%, transparent);
+  box-shadow: var(--elev-2);
 }
 .auth-brandname {
   font-size: 16px;
@@ -123,9 +123,9 @@
 }
 .emailfield input::placeholder { color: var(--faint); }
 .authbtn.email {
-  background: var(--accent);
-  color: #fff;
-  box-shadow: 0 10px 22px -6px color-mix(in srgb, var(--accent) 55%, transparent);
+  background: var(--accent-solid);
+  color: var(--on-accent);
+  box-shadow: var(--elev-2);
 }
 .auth-terms {
   flex: 0 0 auto;
@@ -192,4 +192,13 @@
   font-size: 15px;
   font-weight: 650;
   color: var(--accent-ink);
+}
+
+@media (max-width: 480px) { /* --layout-mobile-max; 16px avoids iOS focus zoom */
+  .emailfield input {
+    font-size: 16px;
+  }
+  .auth-terms {
+    padding-bottom: max(30px, env(safe-area-inset-bottom));
+  }
 }

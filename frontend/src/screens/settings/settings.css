@@ -66,7 +66,7 @@
   background: var(--surface-sunk); color: var(--muted);
   display: flex; align-items: center; justify-content: center; flex: 0 0 auto;
 }
-.settings-screen .rlabel { flex: 1 1 auto; font-size: 15px; font-weight: 550; }
+.settings-screen .rlabel { flex: 1 1 auto; font-size: 15px; font-weight: 600; }
 .settings-screen .rlabel small { display: block; font-size: 12px; font-weight: 400; color: var(--faint); margin-top: 1px; }
 .settings-screen .rval { font-size: 14.5px; color: var(--muted); font-weight: 500; }
 .settings-screen .rcount {
@@ -77,10 +77,7 @@
 .settings-screen .row .chev { color: var(--faint); flex: 0 0 auto; }
 .settings-screen .conn {
   font-size: 12px; font-weight: 700; color: var(--accent-ink);
-  background: var(--accent-tint); border-radius: 20px; padding: 3px 10px;
-  display: flex; align-items: center; gap: 5px;
 }
-.settings-screen .conn .d { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); }
 
 /* theme row (segmented control) */
 .settings-screen .theme-row {

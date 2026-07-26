@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { PhoneFrame, StatusBar, SubHeader } from '../../components/Frame';
-import { Icon, iconForRoute } from '../../components/Icon';
+import { Icon } from '../../components/Icon';
+import { PillGlyph } from '../../components/PillGlyph';
 import { PdfCanvas } from '../../components/PdfCanvas';
 import { useStore } from '../../data/store';
 import { refreshInteractions, checkInteractions } from '../../lib/interactions';
@@ -220,7 +221,7 @@ export function Share() {
             <button className="done" onClick={() => setView('doc')}>Done</button>
             <span className="fname">Medication-summary.pdf</span>
             <button className="shr-glyph" aria-label="Share PDF" onClick={() => void savePdf()}>
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.9} strokeLinecap="round" strokeLinejoin="round"><path d="M12 3v11" /><path d="M8.5 6.5L12 3l3.5 3.5" /><path d="M6 11v8a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1v-8" /></svg>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><path d="M12 3v11" /><path d="M8.5 6.5L12 3l3.5 3.5" /><path d="M6 11v8a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1v-8" /></svg>
             </button>
           </div>
           {gpLinkErr && (
@@ -236,7 +237,7 @@ export function Share() {
           <div className="shr-pdf-bottom">
             <span className="shr-pdf-page-ind">Page {pdfPage} of {pdfPages}</span>
             <button className="shr-pdf-share" onClick={() => void shareLink()} disabled={shareLoading}>
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.9} strokeLinecap="round" strokeLinejoin="round"><path d="M12 3v11" /><path d="M8.5 6.5L12 3l3.5 3.5" /><path d="M6 11v8a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1v-8" /></svg>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><path d="M12 3v11" /><path d="M8.5 6.5L12 3l3.5 3.5" /><path d="M6 11v8a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1v-8" /></svg>
               Share
             </button>
             <button className="shr-pdf-print" aria-label="Print" onClick={printPdf}>
@@ -286,7 +287,7 @@ export function Share() {
               <Icon name="download" size={17} /> Save PDF
             </button>
             <button className="shr-btn primary" onClick={() => void shareLink()} disabled={shareLoading}>
-              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.9} strokeLinecap="round" strokeLinejoin="round"><path d="M4 12v7a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-7" /><path d="M16 6l-4-4-4 4M12 2v13" /></svg>
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><path d="M4 12v7a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-7" /><path d="M16 6l-4-4-4 4M12 2v13" /></svg>
               Share link
             </button>
           </div>
@@ -315,7 +316,7 @@ export function Share() {
               <div className="sh"><span>Current medications</span><span className="tab">{active.length} active</span></div>
               {active.map((m) => (
                 <div className="shr-med" key={m.id}>
-                  <span className="mi"><Icon name={iconForRoute(m.route)} size={17} /></span>
+                  <span className="mi"><PillGlyph name={m.name} form={m.form} size={30} /></span>
                   <div>
                     <div className="mn">{m.name} {m.dose}</div>
                     <div className="md">{m.brand} · {m.scheduleLabel || m.times.join(', ')}</div>
@@ -339,7 +340,7 @@ export function Share() {
               <div className="sh"><span>Archived</span><span className="tab">{archived.length} items</span></div>
               {archived.map((m) => (
                 <div className="shr-med" key={m.id}>
-                  <span className="mi"><Icon name={iconForRoute(m.route)} size={17} /></span>
+                  <span className="mi"><PillGlyph name={m.name} form={m.form} size={30} /></span>
                   <div>
                     <div className="mn">{m.name} {m.dose}</div>
                     <div className="md">{m.brand} · {m.scheduleLabel || m.times.join(', ')}</div>

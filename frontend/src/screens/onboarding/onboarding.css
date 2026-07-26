@@ -123,10 +123,10 @@
   color: var(--muted);
 }
 .ob-chip.on {
-  background: var(--accent);
+  background: var(--accent-solid);
   border-color: var(--accent);
-  color: #fff;
-  box-shadow: 0 6px 14px -4px color-mix(in srgb, var(--accent) 50%, transparent);
+  color: var(--on-accent);
+  box-shadow: var(--elev-2);
 }
 
 .ob-medchips {
@@ -266,12 +266,12 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #fff;
+  color: var(--on-accent);
   flex: 0 0 auto;
   margin-top: 1px;
 }
 .ob-consent input:checked + .ob-box {
-  background: var(--accent);
+  background: var(--accent-solid);
   border-color: var(--accent);
 }
 .ob-box svg { opacity: 0; }
@@ -291,8 +291,8 @@
   width: 100%;
   border: 0;
   border-radius: 15px;
-  background: var(--accent);
-  color: #fff;
+  background: var(--accent-solid);
+  color: var(--on-accent);
   font-size: 16px;
   font-weight: 700;
   padding: 16px 0;
@@ -300,10 +300,16 @@
   align-items: center;
   justify-content: center;
   gap: 9px;
-  box-shadow: 0 10px 22px -6px color-mix(in srgb, var(--accent) 55%, transparent);
+  box-shadow: var(--elev-2);
 }
 .ob-cta:disabled {
   opacity: 0.45;
   box-shadow: none;
   cursor: not-allowed;
+}
+
+@media (max-width: 480px) { /* --layout-mobile-max; 16px avoids iOS focus zoom */
+  .ob-addrow input {
+    font-size: 16px;
+  }
 }
